@@ -2,6 +2,14 @@ import express from 'express';
 import path from 'path';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { PDFParse } from 'pdf-parse';
+
+async function parsePdfBuffer(buffer: Buffer) {
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  await parser.destroy();
+  return result.text;
+}
 
 async function startServer() {
   const app = express();
