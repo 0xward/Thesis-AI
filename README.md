@@ -1,4 +1,4 @@
-<img width="1080" height="346" alt="1000117510" src="https://github.com/user-attachments/assets/6dd7d50c-bee9-4a67-9780-c675301c83c6" />
+<img width="1744" height="560" alt="1000117517" src="https://github.com/user-attachments/assets/8484ba13-5797-4933-8394-e26b6bc3b20b" />
 
 
 # ThesisAI: Research Agent
