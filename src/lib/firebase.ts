@@ -22,10 +22,11 @@ export const googleProvider = new GoogleAuthProvider();
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.error("Please check your Firebase configuration or network.");
     }
+    // Ignore missing permissions for test connection
   }
 }
 testConnection();

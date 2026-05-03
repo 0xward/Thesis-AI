@@ -1,13 +1,7 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
-import multer from 'multer';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-
-import PDFParser from 'pdf2json';
-
-const upload = multer({ storage: multer.memoryStorage() });
 
 async function startServer() {
   const app = express();
@@ -26,54 +20,100 @@ async function startServer() {
       const { url } = req.body;
       if (!url) return res.status(400).json({ error: 'URL is required' });
 
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      // Identify dynamic sites or paywalled sites by trying multiple fetch attempts/headers
+      let response;
+      try {
+        response = await axios.get(url, {
+          responseType: 'arraybuffer',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          timeout: 15000,
+          validateStatus: () => true
+        });
+        
+        // If forbidden or client error, try a proxy
+        if (response.status === 403 || response.status === 401 || response.status === 429) {
+          throw new Error('Blocked by target server');
         }
+      } catch (e: any) {
+        console.log(`Direct fetch failed for ${url}, trying via AllOrigins proxy...`);
+        try {
+          response = await axios.get(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, {
+            responseType: 'arraybuffer',
+            timeout: 20000,
+            validateStatus: () => true
+          });
+        } catch (proxyError: any) {
+          return res.status(500).json({ error: `Website tidak dapat diakses (mungkin dilindungi atau memerlukan login). Error: ${proxyError.message}` });
+        }
+      }
+
+      if (response.status !== 200) {
+        return res.status(response.status).json({ 
+          error: `Gagal memuat URL: ${response.status} ${response.statusText}`,
+          detail: 'Website kemungkinan memblokir akses otomatis (bot protection) atau file PDF langsung. Coba unduh PDF/artikel dan upload manual.'
+        });
+      }
+
+      const contentType = response.headers['content-type']?.toLowerCase() || '';
+      const buffer = Buffer.from(response.data);
+
+      if (contentType.includes('application/pdf')) {
+        const text = await parsePdfBuffer(buffer);
+        return res.json({ text: text.substring(0, 150000), type: 'pdf' });
+      }
+
+      // Default to HTML handling
+      const html = buffer.toString('utf-8');
+      
+      // Use Readability and JSDOM for better extraction
+      const { JSDOM } = await import('jsdom');
+      const { Readability } = await import('@mozilla/readability');
+      const TurndownService = (await import('turndown')).default;
+      
+      const dom = new JSDOM(html, { url });
+      const reader = new Readability(dom.window.document);
+      const article = reader.parse();
+
+      if (!article || !article.content) {
+        // Fallback to basic cheerio if readability fails
+        const $ = cheerio.load(html);
+        $('script, style, noscript, iframe, img, svg, nav, footer, header').remove();
+        const text = $('body').text().replace(/\s+/g, ' ').trim();
+        if (!text) {
+          return res.status(422).json({ error: 'Could not extract content from page. The page might be empty or restricted.' });
+        }
+        return res.json({ text: text.substring(0, 100000), type: 'html-basic' });
+      }
+
+      // Convert the cleaned HTML to Markdown for better structure
+      const turndownService = new TurndownService();
+      const markdown = turndownService.turndown(article.content);
+      
+      const resultText = `Title: ${article.title}\n\n${markdown}`;
+
+      res.json({ 
+        text: resultText.substring(0, 150000), 
+        title: article.title,
+        excerpt: article.excerpt,
+        type: 'html-readability' 
       });
-      const html = response.data;
-      const $ = cheerio.load(html);
-      
-      // Remove scripts, styles, etc.
-      $('script, style, noscript, iframe, img, svg').remove();
-      
-      const text = $('body').text().replace(/\s+/g, ' ').trim();
-      
-      res.json({ text: text.substring(0, 100000) }); // Limit to avoid massive responses
     } catch (error: any) {
       console.error('Fetch URL error:', error.message);
-      res.status(500).json({ error: 'Failed to fetch URL content' });
-    }
-  });
-
-  app.post('/api/parse-pdf', upload.single('file'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
-
-            const pdfParser = new PDFParser();
-      const text = await new Promise<string>((resolve, reject) => {
-        pdfParser.on('pdfParser_dataError', (errData: any) => reject(errData.parserError));
-        pdfParser.on('pdfParser_dataReady', () => {
-          const pages = (pdfParser as any).data.Pages;
-          let extractedText = '';
-          for (const page of pages) {
-            for (const textItem of page.Texts) {
-              extractedText += decodeURIComponent(textItem.R[0].T) + ' ';
-            }
-          }
-          resolve(extractedText);
-        });
-        pdfParser.parseBuffer(req.file!.buffer);
+      res.status(500).json({ 
+        error: 'Gagal memproses konten URL: ' + error.message,
+        detail: 'Website kemungkinan memblokir akses otomatis, atau isi website tidak dapat diekstrak. Disarankan untuk mengunggah file dokumen atau PDF secara manual.'
       });
-      if (!text) {
-        throw new Error('PDF parsing resulted in empty or invalid data');
-      }
-      res.json({ text });
-    } catch (error: any) {
-      console.error('PDF Parse Error Detail:', error);
-      res.status(500).json({ error: 'Failed to parse PDF: ' + (error.message || 'Unknown error') });
     }
   });
 
@@ -124,8 +164,9 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const viteMod = await import('vite');
+    const vite = await viteMod.createServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });

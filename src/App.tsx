@@ -4,13 +4,12 @@ import { FileText, Link, Upload, BookOpen, Settings, Play, CheckCircle, Download
 import { cn } from './lib/utils';
 import axios from 'axios';
 import Markdown from 'react-markdown';
+import ChatAssistant from './components/ChatAssistant';
 
-// import { ThesisConfig, ResearchSource, ThesisStructure, generateThesisStructure, generateChapterContentStream, ChapterDefinition, generateTitleOptions } from './services/aiService';
-// I will keep the imports as they are, but remove PDF related things
-import { ThesisConfig, ResearchSource, ThesisStructure, generateThesisStructure, generateChapterContentStream, ChapterDefinition, generateTitleOptions } from './services/aiService';
+import { ThesisConfig, ResearchSource, ThesisStructure, generateThesisStructure, generateChapterContentStream, ChapterDefinition, generateTitleOptions, generateReferences } from './services/aiService';
 import { auth, googleProvider, db } from './lib/firebase';
 import { signInWithPopup, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, onSnapshot, increment, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, increment, updateDoc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { thesisPersistenceService, ThesisData } from './services/thesisPersistenceService';
 
 interface Revision {
@@ -37,11 +36,19 @@ export default function App() {
     
     // Increment visit (simple)
     const incrementVisit = async () => {
-      const snap = await getDoc(visitorRef);
-      if (!snap.exists()) {
-        await setDoc(visitorRef, { count: 1 });
-      } else {
-        await updateDoc(visitorRef, { count: increment(1) });
+      try {
+        const snap = await getDoc(visitorRef).catch(() => null);
+        if (!snap || !snap.exists()) {
+          await setDoc(visitorRef, { count: 1 }).catch(() => {});
+        } else {
+          await updateDoc(visitorRef, { count: increment(1) }).catch(() => {});
+        }
+      } catch (error) {
+        if (error.message && error.message.includes("Missing or insufficient permissions")) {
+          // Silently fail if rules aren't updated
+        } else {
+          console.error("Failed to increment visit", error);
+        }
       }
     };
     incrementVisit();
@@ -49,6 +56,12 @@ export default function App() {
     // Listen to visitors
     const unsubVisitors = onSnapshot(visitorRef, (snap) => {
         if(snap.exists()) setVisitorCount(snap.data().count);
+    }, (error) => {
+        if (error.message && error.message.includes("Missing or insufficient permissions")) {
+          // Silently fail if rules aren't updated
+        } else {
+          console.error("Failed to listen to visitors", error);
+        }
     });
 
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -68,8 +81,13 @@ export default function App() {
 
   const loadUserTheses = async () => {
     setIsLoadingTheses(true);
-    const data = await thesisPersistenceService.getUserTheses();
-    setSavedTheses(data);
+    try {
+      const data = await thesisPersistenceService.getUserTheses();
+      setSavedTheses(data);
+    } catch (e) {
+      console.error("Failed to load user theses", e);
+      setSavedTheses([]);
+    }
     setIsLoadingTheses(false);
   };
 
@@ -77,7 +95,12 @@ export default function App() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (e: any) {
-      alert("Login failed: " + e.message);
+      console.error("Full Login Error:", e);
+      let errorDetail = "";
+      if (e.code === 'auth/unauthorized-domain') {
+        errorDetail = "\n\nPastikan domain vercel kamu sudah ditambahkan di Firebase Console -> Authentication -> Settings -> Authorized domains.";
+      }
+      alert(`Login failed: ${e.code} - ${e.message}${errorDetail}`);
     }
   };
 
@@ -300,13 +323,20 @@ export default function App() {
     try {
       const res = await axios.post('/api/fetch-url', { url: urlInput });
       if (res.data.text) {
-        setSources(prev => [...prev, { type: 'url', content: res.data.text, title: urlInput }]);
+        setSources(prev => [...prev, { 
+          type: 'url', 
+          content: res.data.text, 
+          title: res.data.title || urlInput 
+        }]);
         setUrlInput('');
       } else {
         alert('Failed to extract text from URL.');
       }
     } catch (e: any) {
-      alert('Error fetching URL: ' + (e.response?.data?.error || e.message));
+      const errorData = e.response?.data?.error;
+      const errorDetail = e.response?.data?.detail;
+      const errorMsg = typeof errorData === 'object' ? JSON.stringify(errorData) : errorData;
+      alert(`Error fetching URL: ${errorMsg || e.message}${errorDetail ? '\n\n' + errorDetail : ''}`);
     } finally {
       setIsFetchingUrl(false);
     }
@@ -412,6 +442,34 @@ export default function App() {
     if (!window.confirm("Are you sure you want to regenerate the thesis? This will create a new revision.")) return;
     setGeneratedThesis([]);
     await generateFullThesis(structure);
+  };
+
+  const [isGeneratingReferences, setIsGeneratingReferences] = useState(false);
+  const handleGenerateReferences = async () => {
+    if (!structure) return;
+    setIsGeneratingReferences(true);
+    try {
+      const refChapter = await generateReferences(sources, config);
+      
+      const newStructure = { ...structure, chapters: [...structure.chapters, { chapter_title: refChapter.chapterTitle, summary: 'References list', subchapters: [] }] };
+      setStructure(newStructure);
+      
+      const newThesis = [...generatedThesis, refChapter];
+      setGeneratedThesis(newThesis);
+
+      const newRevision: Revision = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        structure: newStructure,
+        generatedThesis: newThesis
+      };
+      setRevisions(prev => [newRevision, ...prev]);
+
+    } catch (e: any) {
+      alert("Error generating references: " + e.message);
+    } finally {
+      setIsGeneratingReferences(false);
+    }
   };
 
   const getThesisMarkdown = () => {
@@ -880,9 +938,6 @@ export default function App() {
                       {isFetchingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link className="w-3 h-3" />}
                       {t('addUrl')}
                     </button>
-                    
-                    <div className="grid grid-cols-1 gap-3 pb-2">
-                    </div>
 
                     <AnimatePresence>
                       {sources.length > 0 && (
@@ -890,7 +945,7 @@ export default function App() {
                           {sources.map((s, i) => (
                             <motion.div key={i} layout className="flex items-center justify-between gap-3 text-[10px] bg-[#0c0d10] p-3 rounded-lg border border-[#1f2128] group">
                                <div className="flex items-center gap-2 min-w-0">
-                                 {s.type === 'url' ? <Globe className="w-3 h-3 text-blue-400" /> : <Info className="w-3 h-3 text-red-400" />}
+                                 {s.type === 'url' ? <Globe className="w-3 h-3 text-blue-400" /> : <Info className="w-3 h-3 text-[#b59a6d]" />}
                                  <span className="truncate text-[#9ca3af] font-mono">{s.title}</span>
                                </div>
                                <button onClick={() => removeSource(i)} className="text-[#4a4b4e] hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
@@ -1011,6 +1066,10 @@ export default function App() {
                       <button onClick={shareThesis} className="flex-1 lg:flex-none px-4 lg:px-6 py-3 border border-[#1f2128] text-[#f0f1f3] text-[10px] font-black uppercase rounded-xl tracking-widest hover:bg-[#16181d] transition-colors flex items-center justify-center gap-2">
                         <Share className="w-3 h-3" /> Share
                       </button>
+                      <button onClick={handleGenerateReferences} disabled={isGeneratingReferences || generatedThesis.length < structure.chapters.length} className="flex-1 lg:flex-none px-4 lg:px-6 py-3 border border-[#1f2128] text-[#f0f1f3] text-[10px] font-black uppercase rounded-xl tracking-widest hover:bg-[#16181d] transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                        {isGeneratingReferences ? <Loader2 className="w-3 h-3 animate-spin"/> : <BookOpen className="w-3 h-3" />} 
+                        Auto References
+                      </button>
                       <button onClick={() => setShowCoffee(true)} className="w-full lg:w-auto px-4 lg:px-6 py-3 border border-[#1f2128] text-[#b59a6d] text-[10px] font-black uppercase rounded-xl tracking-widest hover:border-[#b59a6d]/50 transition-colors flex items-center justify-center gap-2">
                         <Heart className="w-3 h-3" /> Buy me a coffee
                       </button>
@@ -1107,6 +1166,13 @@ export default function App() {
           <div>Powered by @aradeawardana97</div>
           <div className="mt-1">© 2026 All Rights Reserved</div>
       </footer>
+      
+      {/* Interactive Chat Assistant */}
+      <ChatAssistant 
+        currentThesis={{ generatedThesis, structure }} 
+        sources={sources} 
+        config={config} 
+      />
     </div>
   );
 }

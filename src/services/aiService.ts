@@ -59,7 +59,60 @@ export interface ChapterDefinition {
   subchapters: string[];
 }
 
+
+export async function chatWithAgent(message: string, currentThesis: any, sources: ResearchSource[], config: ThesisConfig): Promise<string> {
+  const thesisContent = currentThesis ? currentThesis.generatedThesis.map((ch: any) => `# ${ch.chapterTitle}\n${ch.content}`).join('\n\n') : 'No thesis generated yet.';
+  
+  const prompt = `You are an elite academic Research Agent assisting the user in writing and reviewing their thesis.
+Respond to the user's message in ${config.targetLanguage}.
+Tone: Helpful, academic, concise.
+
+Current Thesis Draft Context (Partial or Full):
+${thesisContent.substring(0, 40000)}
+
+User Message:
+${message}
+`;
+
+  const response = await callWithFallback((model) => 
+    ai.models.generateContent({
+      model,
+      contents: prompt,
+    })
+  );
+
+  return response.text || "No response generated.";
+}
+
+export async function generateReferences(sources: ResearchSource[], config: ThesisConfig): Promise<{ chapterTitle: string, content: string }> {
+  const sourceTexts = sources.map((s, i) => `Source ${i + 1} (${s.title || 'Untitled'}):\n${s.content.substring(0, 5000)}`).join('\n\n---\n\n');
+
+  const prompt = `You are an elite academic Research Agent.
+Based on the provided sources, generate a complete "References" (or "Daftar Pustaka" if Indonesian) list in the ${config.citationStyle} format.
+Output ONLY the markdown content for this chapter, including an H1 heading (e.g. "# References").
+You must infer the authors, publication year, title, and publisher/URL based on the source text if possible. If unavailable, use a valid placeholder format.
+
+Sources:
+${sourceTexts}
+`;
+
+  const response = await callWithFallback((model) => 
+    ai.models.generateContent({
+      model,
+      contents: prompt,
+    })
+  );
+
+  const titleEn = "References";
+  const titleId = "Daftar Pustaka";
+  return {
+    chapterTitle: config.targetLanguage.toLowerCase() === 'indonesian' ? titleId : titleEn,
+    content: response.text || "No references could be generated."
+  }
+}
+
 export async function generateTitleOptions(sources: ResearchSource[], config: ThesisConfig): Promise<string[]> {
+
   const sourceTexts = sources.map((s, i) => `Source ${i + 1}:\n${s.content.substring(0, 10000)}`).join('\n\n---\n\n');
   const prompt = `You are an elite academic Research Agent.
 Based on the provided sources and configuration, generate 5 formal, convincing thesis title options that align with academic standards.
