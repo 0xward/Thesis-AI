@@ -1,3 +1,6 @@
+<img width="1744" height="560" alt="1000117517" src="https://github.com/user-attachments/assets/e90d5f00-adb5-4670-96f4-1eb8463f4cd2" />
+
+
 # ThesisAI: Research Agent
 
 An elite autonomous AI Research Agent specialized in transforming journals, academic papers, and PDFs into fully structured thesis-quality academic documents.
@@ -16,55 +19,3 @@ An elite autonomous AI Research Agent specialized in transforming journals, acad
 - **Backend/Services**: Node.js, Express (proxy/server)
 - **Database/Auth**: Firebase Firestore & Authentication
 - **AI**: Google Gemini API
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18+)
-- npm
-
-### Installation
-
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Environment Variables
-
-Create a `.env` file based on `.env.example` and populate the required API keys (e.g., `GEMINI_API_KEY`).
-
-### Firebase Configuration
-
-Since `firebase-applet-config.json` contains public API keys (which GitHub's scanner may flag), it is excluded from the repository. 
-To run this project locally, you must create a `firebase-applet-config.json` file in the root directory with the following structure:
-
-```json
-{
-  "projectId": "your-project-id",
-  "appId": "your-app-id",
-  "apiKey": "AIza...",
-  "authDomain": "your-project.firebaseapp.com",
-  "firestoreDatabaseId": "your-db-id",
-  "storageBucket": "your-project.firebasestorage.app",
-  "messagingSenderId": "your-sender-id",
-  "measurementId": ""
-}
-```
-
-### Development
-
-Start the development server:
-```bash
-npm run dev
-```
-
-## Contributing
-
-Contributions are welcome! Please open an issue to discuss proposed changes.
-
-## License
-
-MIT
