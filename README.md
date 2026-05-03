@@ -1,3 +1,6 @@
+<img width="1744" height="560" alt="1000117517" src="https://github.com/user-attachments/assets/27c877b6-dd5e-4321-aaf6-0cee28cce2fd" />
+
+
 # ThesisAI: Research Agent
 
 An elite autonomous AI Research Agent specialized in transforming journals, academic papers, and PDFs into fully structured thesis-quality academic documents.
@@ -41,32 +44,6 @@ ThesisAI is integrated with the Celo blockchain and optimized for **MiniPay** (O
    ```bash
    npm install
    ```
-
-### Environment Variables
-
-Create a `.env` file based on `.env.example` and populate the required keys:
-
-- `GEMINI_API_KEY`: Google Gemini API key.
-- `VITE_WALLET_CONNECT_PROJECT_ID`: Your WalletConnect Project ID.
-- `VITE_CELO_WALLET_ADDRESS`: Target CELO wallet address for support payments.
-
-### Firebase Configuration
-
-Since `firebase-applet-config.json` contains public API keys (which GitHub's scanner may flag), it is excluded from the repository. 
-To run this project locally, you must create a `firebase-applet-config.json` file in the root directory with the following structure:
-
-```json
-{
-  "projectId": "your-project-id",
-  "appId": "your-app-id",
-  "apiKey": "AIza...",
-  "authDomain": "your-project.firebaseapp.com",
-  "firestoreDatabaseId": "your-db-id",
-  "storageBucket": "your-project.firebasestorage.app",
-  "messagingSenderId": "your-sender-id",
-  "measurementId": ""
-}
-```
 
 ### Development
 
