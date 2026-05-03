@@ -32,28 +32,6 @@ An elite autonomous AI Research Agent specialized in transforming journals, acad
    npm install
    ```
 
-### Environment Variables
-
-Create a `.env` file based on `.env.example` and populate the required API keys (e.g., `GEMINI_API_KEY`).
-
-### Firebase Configuration
-
-Since `firebase-applet-config.json` contains public API keys (which GitHub's scanner may flag), it is excluded from the repository. 
-To run this project locally, you must create a `firebase-applet-config.json` file in the root directory with the following structure:
-
-```json
-{
-  "projectId": "your-project-id",
-  "appId": "your-app-id",
-  "apiKey": "AIza...",
-  "authDomain": "your-project.firebaseapp.com",
-  "firestoreDatabaseId": "your-db-id",
-  "storageBucket": "your-project.firebasestorage.app",
-  "messagingSenderId": "your-sender-id",
-  "measurementId": ""
-}
-```
-
 ### Development
 
 Start the development server:
