@@ -1,0 +1,26 @@
+{
+  "entities": {
+    "thesis": {
+      "title": "Thesis",
+      "description": "Represents a generated thesis document state",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner of the thesis" },
+        "title": { "type": "string", "description": "The title of the thesis" },
+        "config": { "type": "object", "description": "Settings like level, major, citation style" },
+        "structure": { "type": "object", "description": "The determined structure of the thesis" },
+        "generatedThesis": { "type": "array", "description": "The actual chapter content" },
+        "sources": { "type": "array", "description": "The sources used for research" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "structure", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/theses/{thesisId}": {
+      "schema": "thesis",
+      "description": "User saves their generated thesis here"
+    }
+  }
+}
