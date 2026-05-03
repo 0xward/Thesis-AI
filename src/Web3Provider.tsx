@@ -9,15 +9,16 @@ const projectId = (import.meta as any).env.VITE_WALLET_CONNECT_PROJECT_ID || '3e
 
 // 2. Create wagmiConfig
 export const config = createConfig({
-  chains: [celo, celoAlfajores],
+  chains: [celo],
+  multiInjectedProviderDiscovery: true,
   connectors: [
     injected({
       target: 'metaMask', // MiniPay often injects as MetaMask-compatible
+      shimDisconnect: true,
     }),
   ],
   transports: {
-    [celo.id]: http(),
-    [celoAlfajores.id]: http(),
+    [celo.id]: http('https://forno.celo.org'),
   },
 });
 

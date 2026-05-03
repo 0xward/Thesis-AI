@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useAccount, useConnect, useDisconnect, useSendTransaction, useBalance } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useBalance, useSwitchChain } from 'wagmi';
 import { celo } from 'wagmi/chains';
 import { parseEther, formatUnits } from 'viem';
-import { Wallet, LogOut, CheckCircle, AlertCircle, Loader2, CreditCard } from 'lucide-react';
+import { Wallet, LogOut, CheckCircle, AlertCircle, Loader2, CreditCard, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const SUPPORT_WALLET = (import.meta as any).env.VITE_CELO_WALLET_ADDRESS || '0x2A6b5204B83C7619c90c4EB6b5365AA0b7d912F7';
 
 export const MiniPayAction: React.FC = () => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
   const { sendTransaction, isPending, isSuccess, error } = useSendTransaction();
   const { data: balance } = useBalance({ address });
   
@@ -18,6 +19,15 @@ export const MiniPayAction: React.FC = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [amount, setAmount] = useState('0.1');
   const [isCustomAmount, setIsCustomAmount] = useState(false);
+
+  const isWrongChain = isConnected && chain?.id !== celo.id;
+
+  useEffect(() => {
+    // Automatically try to switch to Celo if on wrong chain
+    if (isWrongChain && switchChain) {
+      switchChain({ chainId: celo.id });
+    }
+  }, [isWrongChain, switchChain]);
 
   useEffect(() => {
     // Detect if running in MiniPay (Opera browser with ethereum injected)
@@ -37,9 +47,19 @@ export const MiniPayAction: React.FC = () => {
 
   const handleSupport = () => {
     if (!isConnected) {
-      const connector = connectors.find(c => c.id === 'injected');
+      // Try to find injected connector, if not find any connector
+      const connector = connectors.find(c => c.id === 'injected') || connectors[0];
       if (connector) {
         connect({ connector });
+      }
+      return;
+    }
+
+    if (isWrongChain) {
+      if (switchChain) {
+        switchChain({ chainId: celo.id });
+      } else {
+        alert("Please switch your wallet network to Celo");
       }
       return;
     }
@@ -52,6 +72,7 @@ export const MiniPayAction: React.FC = () => {
     sendTransaction({
       to: SUPPORT_WALLET as `0x${string}`,
       value: parseEther(amount),
+      chainId: celo.id,
     });
   };
 
@@ -115,8 +136,13 @@ export const MiniPayAction: React.FC = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => {
+              // Connect using injected connector (MiniPay)
               const connector = connectors.find(c => c.id === 'injected');
-              if (connector) connect({ connector });
+              if (connector) {
+                connect({ connector });
+              } else if (connectors.length > 0) {
+                connect({ connector: connectors[0] });
+              }
             }}
             className="flex items-center gap-2 bg-[#b59a6d] hover:bg-[#c6ab7e] text-[#111318] px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-lg"
           >
@@ -139,7 +165,19 @@ export const MiniPayAction: React.FC = () => {
           </div>
         )}
 
-        {isConnected && (
+        {isConnected && isWrongChain && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => switchChain?.({ chainId: celo.id })}
+            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+          >
+            <RefreshCw size={16} className={isPending ? 'animate-spin' : ''} />
+            Switch to Celo
+          </motion.button>
+        )}
+
+        {isConnected && !isWrongChain && (
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

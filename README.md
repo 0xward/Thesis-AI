@@ -1,10 +1,3 @@
-![Base Ecosystem Project](https://img.shields.io/badge/Base%20Ecosystem%20Project-0052ff?logo=coinbase)
-![Base Verified Contract](https://img.shields.io/badge/Base%20Verified%20Contract-0f67ff?logo=coinbase)
-![Built on Base](https://img.shields.io/badge/Built%20on%20Base-blue?logo=coinbase)
-
-<img width="1744" height="560" alt="1000117517" src="https://github.com/user-attachments/assets/fec1dcab-5c5c-4553-acb9-b72954cc2c74" />
-
-
 # ThesisAI: Research Agent
 
 An elite autonomous AI Research Agent specialized in transforming journals, academic papers, and PDFs into fully structured thesis-quality academic documents.
