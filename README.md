@@ -1,6 +1,3 @@
-<img width="1744" height="560" alt="1000117517" src="https://github.com/user-attachments/assets/8484ba13-5797-4933-8394-e26b6bc3b20b" />
-
-
 # ThesisAI: Research Agent
 
 An elite autonomous AI Research Agent specialized in transforming journals, academic papers, and PDFs into fully structured thesis-quality academic documents.
@@ -34,6 +31,28 @@ An elite autonomous AI Research Agent specialized in transforming journals, acad
    ```bash
    npm install
    ```
+
+### Environment Variables
+
+Create a `.env` file based on `.env.example` and populate the required API keys (e.g., `GEMINI_API_KEY`).
+
+### Firebase Configuration
+
+Since `firebase-applet-config.json` contains public API keys (which GitHub's scanner may flag), it is excluded from the repository. 
+To run this project locally, you must create a `firebase-applet-config.json` file in the root directory with the following structure:
+
+```json
+{
+  "projectId": "your-project-id",
+  "appId": "your-app-id",
+  "apiKey": "AIza...",
+  "authDomain": "your-project.firebaseapp.com",
+  "firestoreDatabaseId": "your-db-id",
+  "storageBucket": "your-project.firebasestorage.app",
+  "messagingSenderId": "your-sender-id",
+  "measurementId": ""
+}
+```
 
 ### Development
 
