@@ -72,7 +72,7 @@ export default function ChatAssistant({ currentThesis, sources, config }: ChatAs
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-[#0c0d10] border-b border-[#1f2128]">
               <div className="flex items-center gap-2">
-                <img src="/ThesisAI_Logo.png" alt="Logo" className="w-10 h-10 rounded-xl object-contain bg-[#16181d] p-1 border border-[#b59a6d]/30" />
+                <img src="/ThesisAI_Logo.png?v=2" alt="Logo" referrerPolicy="no-referrer" className="w-10 h-10 rounded-xl object-contain bg-[#16181d] p-1 border border-[#b59a6d]/30" />
                 <div>
                   <h3 className="text-sm font-semibold text-[#f0f1f3]">Research Assistant</h3>
                   <p className="text-[10px] text-[#9ca3af]">AI Powered Q&A</p>
@@ -91,7 +91,7 @@ export default function ChatAssistant({ currentThesis, sources, config }: ChatAs
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden border border-[#b59a6d]/20 ${msg.role === 'user' ? 'bg-[#b59a6d]' : 'bg-[#16181d]'}`}>
-                    {msg.role === 'user' ? <User className="w-4 h-4 text-[#0c0d10]" /> : <img src="/ThesisAI_Logo.png" alt="AI" className="w-full h-full object-contain" />}
+                    {msg.role === 'user' ? <User className="w-4 h-4 text-[#0c0d10]" /> : <img src="/ThesisAI_Logo.png?v=2" alt="AI" referrerPolicy="no-referrer" className="w-full h-full object-contain" />}
                   </div>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.role === 'user' ? 'bg-[#b59a6d] text-[#0c0d10]' : 'bg-[#1f2128] text-[#f0f1f3]'}`}>
                     <div className={msg.role === 'user' ? 'text-sm' : 'text-sm prose prose-invert prose-p:my-1 prose-sm max-w-none'}>
@@ -103,7 +103,7 @@ export default function ChatAssistant({ currentThesis, sources, config }: ChatAs
               {isLoading && (
                 <div className="flex gap-3 flex-row">
                   <div className="w-8 h-8 rounded-full bg-[#16181d] flex items-center justify-center shrink-0 overflow-hidden border border-[#b59a6d]/20">
-                    <img src="/ThesisAI_Logo.png" alt="AI" className="w-full h-full object-contain" />
+                    <img src="/ThesisAI_Logo.png?v=2" alt="AI" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                   </div>
                   <div className="bg-[#1f2128] text-[#f0f1f3] rounded-2xl px-4 py-3 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-[#b59a6d]" />

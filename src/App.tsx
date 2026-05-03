@@ -835,7 +835,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-6">
             <div className="flex items-center gap-2 lg:gap-3 cursor-pointer" onClick={() => { setView('generator'); setStep(1); }}>
-              <img src="/ThesisAI_Logo.png" alt="ThesisAI Logo" className="w-12 h-12 lg:w-16 lg:h-16 rounded-2xl object-contain bg-[#16181d] p-1 border border-[#b59a6d]/20 shadow-[0_0_20px_rgba(181,154,109,0.1)]" />
+              <img src="/ThesisAI_Logo.png?v=2" alt="ThesisAI Logo" referrerPolicy="no-referrer" className="w-12 h-12 lg:w-16 lg:h-16 rounded-2xl object-contain bg-[#16181d] p-1 border border-[#b59a6d]/20 shadow-[0_0_20px_rgba(181,154,109,0.1)]" />
               <h1 className="text-xl lg:text-3xl font-bold font-sans tracking-tight text-[#f0f1f3]">ThesisAI</h1>
             </div>
             <div className="hidden xl:block text-[10px] font-bold text-[#4a4b4e] uppercase font-mono px-3 py-1.5 border border-[#1f2128] rounded bg-[#0c0d10]">
