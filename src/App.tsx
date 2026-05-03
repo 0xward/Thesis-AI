@@ -11,7 +11,7 @@ import { ThesisConfig, ResearchSource, ThesisStructure, generateThesisStructure,
 import { auth, googleProvider, db } from './lib/firebase';
 import { signInWithPopup, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, onSnapshot, increment, updateDoc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
-import { thesisPersistenceService, ThesisData } from './services/thesisPersistenceService';
+import { thesisPersistenceService, ThesisData } from './thesisPersistenceService';
 
 interface Revision {
   id: string;
