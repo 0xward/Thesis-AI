@@ -334,10 +334,24 @@ export default function App() {
         alert('Failed to extract text from URL.');
       }
     } catch (e: any) {
-      const errorData = e.response?.data?.error;
-      const errorDetail = e.response?.data?.detail;
-      const errorMsg = typeof errorData === 'object' ? JSON.stringify(errorData) : errorData;
-      alert(`Error fetching URL: ${errorMsg || e.message}${errorDetail ? '\n\n' + errorDetail : ''}`);
+      console.error("URL Fetch Error:", e);
+      let errorMsg = e.message;
+      let errorDetail = "";
+      
+      if (e.response?.data) {
+        if (typeof e.response.data === 'string') {
+          errorMsg = e.response.data;
+        } else if (e.response.data.error) {
+          errorMsg = typeof e.response.data.error === 'object' 
+            ? JSON.stringify(e.response.data.error) 
+            : e.response.data.error;
+          errorDetail = e.response.data.detail || "";
+        } else {
+          errorMsg = JSON.stringify(e.response.data);
+        }
+      }
+      
+      alert(`Error fetching URL: ${errorMsg}${errorDetail ? '\n\n' + errorDetail : ''}`);
     } finally {
       setIsFetchingUrl(false);
     }

@@ -2,13 +2,17 @@ import express from 'express';
 import path from 'path';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { PDFParse } from 'pdf-parse';
 
 async function parsePdfBuffer(buffer: Buffer) {
-  const parser = new PDFParse({ data: buffer });
-  const result = await parser.getText();
-  await parser.destroy();
-  return result.text;
+  try {
+    const pdfImport = await import('pdf-parse');
+    const pdf = (pdfImport as any).default || pdfImport;
+    const data = await (pdf as any)(buffer);
+    return data.text || '';
+  } catch (error: any) {
+    console.error('PDF parsing error:', error.message);
+    throw new Error('Gagal membaca file PDF. Pastikan file PDF tidak terenkripsi atau rusak.');
+  }
 }
 
 async function startServer() {
@@ -30,53 +34,42 @@ async function startServer() {
 
       // Identify dynamic sites or paywalled sites by trying multiple fetch attempts/headers
       let response;
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      };
+
       try {
         response = await axios.get(url, {
           responseType: 'arraybuffer',
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1'
-          },
-          timeout: 15000,
-          validateStatus: () => true
+          headers,
+          timeout: 8000,
+          validateStatus: (status) => status < 400
         });
-        
-        // If forbidden or client error, try a proxy
-        if (response.status === 403 || response.status === 401 || response.status === 429) {
-          throw new Error('Blocked by target server');
-        }
       } catch (e: any) {
-        console.log(`Direct fetch failed for ${url}, trying via AllOrigins proxy...`);
+        console.log(`Direct fetch failed for ${url}, trying via proxy...`);
         try {
+          // Try a different proxy if direct fetch fails
           response = await axios.get(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, {
             responseType: 'arraybuffer',
-            timeout: 20000,
-            validateStatus: () => true
+            timeout: 10000,
+            validateStatus: (status) => status < 400
           });
         } catch (proxyError: any) {
-          return res.status(500).json({ error: `Website tidak dapat diakses (mungkin dilindungi atau memerlukan login). Error: ${proxyError.message}` });
+          return res.status(500).json({ 
+            error: 'Website tidak dapat diakses.',
+            detail: 'Website kemungkinan memblokir akses otomatis atau sedang down. Disarankan gunakan fitur upload PDF atau copy-paste teks secara manual.'
+          });
         }
-      }
-
-      if (response.status !== 200) {
-        return res.status(response.status).json({ 
-          error: `Gagal memuat URL: ${response.status} ${response.statusText}`,
-          detail: 'Website kemungkinan memblokir akses otomatis (bot protection) atau file PDF langsung. Coba unduh PDF/artikel dan upload manual.'
-        });
       }
 
       const contentType = response.headers['content-type']?.toLowerCase() || '';
       const buffer = Buffer.from(response.data);
 
-      if (contentType.includes('application/pdf')) {
+      if (contentType.includes('application/pdf') || url.toLowerCase().endsWith('.pdf')) {
         const text = await parsePdfBuffer(buffer);
         return res.json({ text: text.substring(0, 150000), type: 'pdf' });
       }
@@ -84,43 +77,57 @@ async function startServer() {
       // Default to HTML handling
       const html = buffer.toString('utf-8');
       
-      // Use Readability and JSDOM for better extraction
-      const { JSDOM } = await import('jsdom');
-      const { Readability } = await import('@mozilla/readability');
-      const TurndownService = (await import('turndown')).default;
-      
-      const dom = new JSDOM(html, { url });
-      const reader = new Readability(dom.window.document);
-      const article = reader.parse();
+      // Try Readability first if it's likely an article
+      try {
+        const { JSDOM } = await import('jsdom');
+        const { Readability } = await import('@mozilla/readability');
+        const TurndownService = (await import('turndown')).default;
+        
+        const dom = new JSDOM(html, { url });
+        const reader = new Readability(dom.window.document);
+        const article = reader.parse();
 
-      if (!article || !article.content) {
-        // Fallback to basic cheerio if readability fails
-        const $ = cheerio.load(html);
-        $('script, style, noscript, iframe, img, svg, nav, footer, header').remove();
-        const text = $('body').text().replace(/\s+/g, ' ').trim();
-        if (!text) {
-          return res.status(422).json({ error: 'Could not extract content from page. The page might be empty or restricted.' });
+        if (article && article.content) {
+          const turndownService = new TurndownService();
+          const markdown = turndownService.turndown(article.content);
+          
+          return res.json({ 
+            text: `Title: ${article.title}\n\n${markdown}`.substring(0, 150000), 
+            title: article.title,
+            excerpt: article.excerpt,
+            type: 'html-readability' 
+          });
         }
-        return res.json({ text: text.substring(0, 100000), type: 'html-basic' });
+      } catch (readError) {
+        console.warn('Readability extraction failed, falling back to basic extraction:', readError);
       }
 
-      // Convert the cleaned HTML to Markdown for better structure
-      const turndownService = new TurndownService();
-      const markdown = turndownService.turndown(article.content);
+      // Fallback to basic cheerio if readability fails or is too heavy
+      const $ = cheerio.load(html);
+      $('script, style, noscript, iframe, img, svg, nav, footer, header, meta, link').remove();
       
-      const resultText = `Title: ${article.title}\n\n${markdown}`;
+      // Try to find main content area
+      const mainText = $('main, article, .content, #content, .post, .article').text().replace(/\s+/g, ' ').trim();
+      const text = mainText || $('body').text().replace(/\s+/g, ' ').trim();
 
-      res.json({ 
-        text: resultText.substring(0, 150000), 
-        title: article.title,
-        excerpt: article.excerpt,
-        type: 'html-readability' 
+      if (!text || text.length < 100) {
+        return res.status(422).json({ 
+          error: 'Konten tidak dapat diekstrak.',
+          detail: 'Halaman ini mungkin dinamis (memerlukan JavaScript) atau tidak memiliki teks yang cukup. Coba copy-paste teks langsung.' 
+        });
+      }
+
+      return res.json({ 
+        text: text.substring(0, 100000), 
+        title: $('title').text() || url,
+        type: 'html-basic' 
       });
+
     } catch (error: any) {
       console.error('Fetch URL error:', error.message);
       res.status(500).json({ 
-        error: 'Gagal memproses konten URL: ' + error.message,
-        detail: 'Website kemungkinan memblokir akses otomatis, atau isi website tidak dapat diekstrak. Disarankan untuk mengunggah file dokumen atau PDF secara manual.'
+        error: 'Gagal memproses konten: ' + error.message,
+        detail: 'Terjadi kesalahan internal. Pastikan URL valid dan dapat diakses publik.'
       });
     }
   });
@@ -130,10 +137,17 @@ async function startServer() {
       const { markdown, title } = req.body;
       if (!markdown) return res.status(400).json({ error: 'Markdown content is required' });
 
-      // Dynamically import marked and html-to-docx to avoid top-level issues if they are ESM/CJS mixed
+      // Dynamically import marked and html-to-docx to avoid top-level issues
       const { marked } = await import('marked');
-      const HTMLToDOCX = (await import('html-to-docx')).default || await import('html-to-docx');
+      const htmlToDocxModule = await import('html-to-docx');
+      const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
       
+      const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
+      
+      if (!generator) {
+        throw new Error('Fallback to basic generator failed: HTMLToDOCX is not defined');
+      }
+
       // Convert Markdown to HTML
       const htmlContent = await marked.parse(markdown);
       
@@ -148,11 +162,6 @@ async function startServer() {
       const finalHtml = processedHtml.replace(/<h1>(?!BAB)(.*?)<\/h1>/gi, '<div style="page-break-before: always;"></div><h1 style="text-align: center;">$1</h1>');
 
       const styledHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2;">${finalHtml}</div></body></html>`;
-
-      // The html-to-docx library usually exports default or module.exports
-      // We handle both cases using dynamic import
-      
-      const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
 
       // Indonesian Skripsi Margins (Twips): 
       // Top 3cm = 1701, Bottom 3cm = 1701, Right 3cm = 1701, Left 4cm = 2268
