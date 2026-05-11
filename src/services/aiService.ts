@@ -63,7 +63,7 @@ export interface ChapterDefinition {
 export async function chatWithAgent(message: string, currentThesis: any, sources: ResearchSource[], config: ThesisConfig): Promise<string> {
   const thesisContent = currentThesis ? currentThesis.generatedThesis.map((ch: any) => `# ${ch.chapterTitle}\n${ch.content}`).join('\n\n') : 'No thesis generated yet.';
   
-  const prompt = `You are an elite academic Research Agent assisting the user in writing and reviewing their thesis.
+  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID. You assist the user in writing and reviewing their thesis.
 Respond to the user's message in ${config.targetLanguage}.
 Tone: Helpful, academic, concise.
 
@@ -87,7 +87,7 @@ ${message}
 export async function generateReferences(sources: ResearchSource[], config: ThesisConfig): Promise<{ chapterTitle: string, content: string }> {
   const sourceTexts = sources.map((s, i) => `Source ${i + 1} (${s.title || 'Untitled'}):\n${s.content.substring(0, 5000)}`).join('\n\n---\n\n');
 
-  const prompt = `You are an elite academic Research Agent.
+  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID.
 Based on the provided sources, generate a complete "References" (or "Daftar Pustaka" if Indonesian) list in the ${config.citationStyle} format.
 Output ONLY the markdown content for this chapter, including an H1 heading (e.g. "# References").
 You must infer the authors, publication year, title, and publisher/URL based on the source text if possible. If unavailable, use a valid placeholder format.
@@ -114,7 +114,7 @@ ${sourceTexts}
 export async function generateTitleOptions(sources: ResearchSource[], config: ThesisConfig): Promise<string[]> {
 
   const sourceTexts = sources.map((s, i) => `Source ${i + 1}:\n${s.content.substring(0, 10000)}`).join('\n\n---\n\n');
-  const prompt = `You are an elite academic Research Agent.
+  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID.
 Based on the provided sources and configuration, generate 5 formal, convincing thesis title options that align with academic standards.
 Academic Major: ${config.major}
 Tone/Formal: ${config.writingStyle}
@@ -154,7 +154,7 @@ export async function generateThesisStructure(sources: ResearchSource[], config:
   
   const lengthGuidance = config.contentLength === 'Short' ? '5 focus chapters' : config.contentLength === 'Comprehensive' ? '8-10 extensive chapters' : '6-7 standard chapters';
 
-  const prompt = `You are an elite academic Research Agent.
+  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID.
 Based on the provided sources, generate a complete ${config.thesisLevel} thesis structure in ${config.targetLanguage}.
 Academic Major: ${config.major}
 Tone/Formal: ${config.writingStyle}
@@ -223,7 +223,7 @@ export async function generateChapterContentStream(
 You MUST rewrite and paraphrase all content naturally. DO NOT copy directly from the sources. Maintain the original meaning and accuracy but ensure the phrasing is entirely novel and original. Synthesize multiple points instead of quoting directly where possible to reduce similarity scores. Ensure the output sounds human-written, academically valid, and highly original.
 ` : "";
 
-  const prompt = `You are an elite academic Research Agent writing a ${config.thesisLevel} thesis for a ${config.major} major in ${config.targetLanguage}.
+  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID, writing a ${config.thesisLevel} thesis for a ${config.major} major in ${config.targetLanguage}.
 Style: ${config.writingStyle}
 Target Depth: ${lengthGuidance}
 
