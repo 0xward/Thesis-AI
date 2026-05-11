@@ -1,3 +1,6 @@
+<img width="1744" height="560" alt="1000117517" src="https://github.com/user-attachments/assets/2082b07e-9b05-4af9-b894-e8b0b184ce72" />
+
+
 # ThesisAI: Research Agent
 
 An elite autonomous AI Research Agent specialized in transforming journals, academic papers, and PDFs into fully structured thesis-quality academic documents.
