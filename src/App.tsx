@@ -5,7 +5,8 @@ import { cn } from './lib/utils';
 import axios from 'axios';
 import Markdown from 'react-markdown';
 import ChatAssistant from './components/ChatAssistant';
-import { MiniPayAction } from './components/MiniPayAction';
+import { DonateAction } from './components/DonateAction';
+import { useStacksWallet } from './Web3Provider';
 
 import { ThesisConfig, ResearchSource, ThesisStructure, generateThesisStructure, generateChapterContentStream, ChapterDefinition, generateTitleOptions, generateReferences } from './services/aiService';
 import { auth, googleProvider, db } from './lib/firebase';
@@ -21,9 +22,9 @@ interface Revision {
 }
 
 export default function App() {
-  const [lang, setLang] = useState<'en' | 'id'>('en');
+  const stacksWallet = useStacksWallet();
+  const [lang] = useState<'en'>('en');
   const [showAbout, setShowAbout] = useState(false);
-  const [showCoffee, setShowCoffee] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<'landing' | 'generator' | 'dashboard'>('landing');
   const [visitorCount, setVisitorCount] = useState<number>(0);
@@ -34,7 +35,7 @@ export default function App() {
   useEffect(() => {
     // Visitor tracking
     const visitorRef = doc(db, 'visitors', 'stats');
-    
+
     // Increment visit (simple)
     const incrementVisit = async () => {
       try {
@@ -99,7 +100,7 @@ export default function App() {
       console.error("Full Login Error:", e);
       let errorDetail = "";
       if (e.code === 'auth/unauthorized-domain') {
-        errorDetail = "\n\nPastikan domain vercel kamu sudah ditambahkan di Firebase Console -> Authentication -> Settings -> Authorized domains.";
+        errorDetail = "\n\nAdd this Vercel domain in Firebase Console -> Authentication -> Settings -> Authorized domains.";
       }
       alert(`Login failed: ${e.code} - ${e.message}${errorDetail}`);
     }
@@ -154,7 +155,7 @@ export default function App() {
       exportPdf: "Export PDF",
       regenerate: "Regenerate Chapter",
       aboutTitle: "About ThesisAI",
-      aboutDesc: "ThesisAI is a high-performance Autonomous Research Agent designed to streamline academic writing. It synthesizes complex information from your provided knowledge base into structured, properly formatted academic prose.",
+      aboutDesc: "ThesisAI is a Stacks-aligned autonomous research workspace that turns user-provided sources into structured academic drafts while preparing the product for verifiable document provenance on Bitcoin-secured infrastructure.",
       disclaimerTitle: "Disclaimer & Ethics",
       disclaimerDesc: "This tool is an AI assistant. AI can hallucinate or produce inaccurate information. Always verify facts and citations. ThesisAI is intended to assist, not replace, critical thinking. Use responsibly and adhere to your institution's academic integrity guidelines.",
       donationTitle: "Support the Project",
@@ -182,68 +183,6 @@ export default function App() {
       contentLength: "Content Length",
       fontProfile: "Font Profile",
       antiPlagiarism: "Anti-Plagiarism",
-    },
-    id: {
-      tagline: "Agen Riset Otonom",
-      heroBadge: "Intelijen akademik yang siap diamankan Bitcoin",
-      heroTitle: "Ubah sumber riset menjadi workspace skripsi yang rapi.",
-      heroDesc: "ThesisAI menggabungkan AI berkecepatan Groq, penulisan berbasis sitasi, ekspor dokumen, dan roadmap proof layer berbasis Bitcoin agar mahasiswa tidak bingung dari sumber mentah sampai draft akademik.",
-      launchStudio: "Buka Research Studio",
-      connectStacks: "Eksplor Lapisan Bitcoin",
-      stacksNote: "Dirancang dengan roadmap keamanan berbasis Bitcoin: provenance riset yang dapat diverifikasi, proof hash dokumen, dan validasi on-chain di tahap berikutnya tanpa mengganggu workflow penulisan.",
-      aiModels: "Mesh Model AI Groq",
-      aiModelsDesc: "Mengalihkan tugas riset melalui Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, dan model fallback cepat dari server.",
-      sourceIngestion: "Ingesti Sumber",
-      sourceIngestionDesc: "Tambahkan URL, tempel teks, atau unggah PDF/TXT/MD sebagai pangkalan pengetahuan terpandu sebelum generasi.",
-      thesisWorkflow: "Workflow Skripsi",
-      thesisWorkflowDesc: "Buat judul, struktur, bab, daftar pustaka, revisi, dan ekspor dalam workspace responsif yang smooth.",
-      bitcoinLayer: "Bitcoin Proof Layer",
-      bitcoinLayerDesc: "Disiapkan untuk proof-of-research, insentif sBTC, dan integrasi smart contract Clarity di tahap berikutnya.",
-      create: "Buat",
-      dashboard: "Dasbor",
-      about: "Tentang",
-      signIn: "Masuk",
-      signOut: "Keluar",
-      newThesis: "Skripsi Baru",
-      myLibrary: "Perpustakaan Riset Saya",
-      manageDrafts: "Kelola draf skripsi dan karya riset Anda yang tersimpan.",
-      noSavedFound: "Tidak Ada Skripsi Tersimpan",
-      startGenerating: "Mulai buat skripsi dan simpan untuk melihatnya di sini di perpustakaan pribadi Anda.",
-      initiate: "Mulai Pembuatan",
-      openDraft: "Buka Draf",
-      saveDraft: "Simpan Draf",
-      exportPptx: "Ekspor PPTX",
-      exportPdf: "Ekspor PDF",
-      regenerate: "Buat Ulang Bab",
-      aboutTitle: "Tentang ThesisAI",
-      aboutDesc: "ThesisAI adalah Agen Riset Otonom berperforma tinggi yang dirancang untuk mempermudah penulisan akademik. Sistem ini menyatukan informasi kompleks dari pangkalan pengetahuan Anda menjadi prosa akademik yang terstruktur dan terformat dengan benar.",
-      disclaimerTitle: "Sanggahan & Etika",
-      disclaimerDesc: "Alat ini adalah asisten AI. AI dapat memberikan informasi yang tidak akurat (halusinasi). Selalu verifikasi fakta dan sitasi. ThesisAI dimaksudkan untuk membantu, bukan menggantikan pemikiran kritis. Gunakan secara bertanggung jawab dan patuhi pedoman integritas akademik institusi Anda.",
-      donationTitle: "Dukung Proyek Ini",
-      donationDesc: "Proyek ini dikembangkan secara independen untuk membantu pelajar di seluruh dunia. Jika Anda merasa terbantu, pertimbangkan untuk mendukung biaya pemeliharaan dan pengembangan lebih lanjut.",
-      languageName: "Bahasa Indonesia",
-      saveConfirmation: "Skripsi berhasil disimpan!",
-      loginRequirement: "Silakan masuk terlebih dahulu untuk menyimpan progres Anda.",
-      revertConfirmation: "Apakah Anda yakin ingin kembali ke versi ini? Perubahan yang belum disimpan akan hilang.",
-      step1Title: "Pangkalan Pengetahuan",
-      step1Desc: "Unggah PDF, tempel URL, atau masukkan teks mentah untuk memandu riset AI.",
-      addUrl: "Tambah URL",
-      pasteText: "Tempel Teks",
-      configureTitle: "Sempurnakan Output",
-      major: "Program Studi",
-      thesisLevel: "Jenjang",
-      writingStyle: "Gaya Penulisan",
-      citationStyle: "Gaya Sitasi",
-      generateFull: "Buat Skripsi Lengkap",
-      processing: "Memproses...",
-      thesisTitle: "Judul (Opsional)",
-      titlePlaceholder: "Biarkan AI memutuskan...",
-      generateTitles: "Buat Pilihan Judul",
-      antiPlagiarismDesc: "Parafrase alami untuk mengurangi skor kesamaan.",
-      language: "Bahasa Target",
-      contentLength: "Panjang Konten",
-      fontProfile: "Profil Font",
-      antiPlagiarism: "Anti-Plagiarisme",
     }
   };
 
@@ -354,10 +293,10 @@ export default function App() {
     try {
       const res = await axios.post('/api/fetch-url', { url: urlInput });
       if (res.data.text) {
-        setSources(prev => [...prev, { 
-          type: 'url', 
-          content: res.data.text, 
-          title: res.data.title || urlInput 
+        setSources(prev => [...prev, {
+          type: 'url',
+          content: res.data.text,
+          title: res.data.title || urlInput
         }]);
         setUrlInput('');
       } else {
@@ -367,20 +306,20 @@ export default function App() {
       console.error("URL Fetch Error:", e);
       let errorMsg = e.message;
       let errorDetail = "";
-      
+
       if (e.response?.data) {
         if (typeof e.response.data === 'string') {
           errorMsg = e.response.data;
         } else if (e.response.data.error) {
-          errorMsg = typeof e.response.data.error === 'object' 
-            ? JSON.stringify(e.response.data.error) 
+          errorMsg = typeof e.response.data.error === 'object'
+            ? JSON.stringify(e.response.data.error)
             : e.response.data.error;
           errorDetail = e.response.data.detail || "";
         } else {
           errorMsg = JSON.stringify(e.response.data);
         }
       }
-      
+
       alert(`Error fetching URL: ${errorMsg}${errorDetail ? '\n\n' + errorDetail : ''}`);
     } finally {
       setIsFetchingUrl(false);
@@ -436,7 +375,7 @@ export default function App() {
       alert("Please provide at least one source (PDF, URL, or Text) before generating.");
       return;
     }
-    
+
     setIsGenerating(true);
     setStatusMessage("Synthesizing Core Structure...");
     setStep(2);
@@ -481,19 +420,19 @@ export default function App() {
       const chapter = struct.chapters[i];
       setCurrentGeneratingChapter(i);
       setCurrentStreamedText('');
-      
+
       try {
         const stream = await generateChapterContentStream(chapter, struct, sources, config, previousContext);
         let chapterContent = "";
-        
+
         for await (const chunk of stream) {
           chapterContent += (chunk as any).text || '';
           setCurrentStreamedText(chapterContent);
         }
-        
+
         results.push({ chapterTitle: chapter.chapter_title, content: chapterContent });
         setGeneratedThesis([...results]);
-        
+
         previousContext += `\n\nChapter ${i+1} (${chapter.chapter_title}) Summary: ${chapterContent.substring(0, 1000)}...`;
         if (previousContext.length > 10000) previousContext = previousContext.slice(-10000);
       } catch (e: any) {
@@ -529,10 +468,10 @@ export default function App() {
     setIsGeneratingReferences(true);
     try {
       const refChapter = await generateReferences(sources, config);
-      
+
       const newStructure = { ...structure, chapters: [...structure.chapters, { chapter_title: refChapter.chapterTitle, summary: 'References list', subchapters: [] }] };
       setStructure(newStructure);
-      
+
       const newThesis = [...generatedThesis, refChapter];
       setGeneratedThesis(newThesis);
 
@@ -554,7 +493,7 @@ export default function App() {
   const getThesisMarkdown = () => {
     if (!structure) return "";
     let md = `# ${structure.title}\n\n`;
-    
+
     md += `## Table of Contents\n\n`;
     structure.chapters.forEach((ch, idx) => {
       md += `${idx + 1}. ${ch.chapter_title}\n`;
@@ -569,7 +508,7 @@ export default function App() {
     generatedThesis.forEach(ch => {
       md += `${ch.content.replace(/\\s*\\[SRC_\\d+\\]/g, '')}\n\n`;
     });
-    
+
     return md;
   };
 
@@ -609,10 +548,10 @@ export default function App() {
       const { marked } = await import('marked');
       const md = getThesisMarkdown();
       let htmlContent = await marked.parse(md);
-      
+
       // Delay to ensure DOM rendering
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Inject page breaks and better formatting for sections
       htmlContent = htmlContent.replace(/<h1>BAB (.*?)[:\-\n](.*?)<\/h1>/gi, (match, bab, title) => {
         return `<div style="page-break-before: always;"></div><h1 style="text-align: center; line-height: 1.2;">
@@ -620,16 +559,16 @@ export default function App() {
           <span style="display: block;">${title.trim()}</span>
         </h1>`;
       });
-      
+
       // Fallback for other H1s
       htmlContent = htmlContent.replace(/<h1>(?!BAB)(.*?)<\/h1>/gi, '<div style="page-break-before: always;"></div><h1 style="text-align: center;">$1</h1>');
-      
+
       const container = document.createElement('div');
       container.className = cn(
         "academic-paper-export",
         config.fontFamily === 'Serif' ? "academic-paper-serif" : "academic-paper-sans"
       );
-      
+
       // Inline styles for export to ensure consistency
       const styleTag = document.createElement('style');
       styleTag.innerHTML = `
@@ -655,7 +594,7 @@ export default function App() {
         }
         .academic-paper-export p {
           text-indent: 1.25cm;
-          margin-bottom: 0px; 
+          margin-bottom: 0px;
           padding-bottom: 0px;
           page-break-inside: auto; /* Allow paragraphs to split if too long */
           line-height: 1.6 !important;
@@ -668,21 +607,21 @@ export default function App() {
           page-break-inside: avoid;
         }
       `;
-      
+
       container.innerHTML = htmlContent;
       container.prepend(styleTag);
-      
+
       document.body.appendChild(container);
-      
+
       const titleSafe = structure.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      // Indonesian Skripsi Margins (Inches): Top 3cm=1.18, Left 4cm=1.57, Bottom 3cm=1.18, Right 3cm=1.18
+      // Academic thesis margins (inches): Top 3cm=1.18, Left 4cm=1.57, Bottom 3cm=1.18, Right 3cm=1.18
       const opt = {
         margin: [1.18, 1.57, 1.18, 1.18] as [number, number, number, number],
         filename: `${titleSafe}.pdf`,
         image: { type: 'jpeg' as const, quality: 1.0 },
-        html2canvas: { 
+        html2canvas: {
           scale: 2.5, // Balanced scale
-          useCORS: true, 
+          useCORS: true,
           logging: false,
           letterRendering: true,
           scrollY: 0
@@ -773,7 +712,7 @@ export default function App() {
         const sourceIndex = parseInt(sourceIndexStr, 10) - 1;
         const source = sources[sourceIndex];
         return (
-          <button 
+          <button
             onClick={(e) => {
               e.preventDefault();
               setViewingSource(source || { type: 'text', content: 'Source details not found.', title: `Source ${sourceIndex + 1}` });
@@ -804,15 +743,15 @@ export default function App() {
       <AnimatePresence>
         {showAbout && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#0c0d10]/95 backdrop-blur-md" onClick={() => setShowAbout(false)}>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={e => e.stopPropagation()} 
+              onClick={e => e.stopPropagation()}
               className="bg-[#111318] w-full max-w-2xl p-6 sm:p-10 rounded-[2.5rem] border border-[#1f2128] shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-[#b59a6d]/5 blur-[100px] -translate-x-1/2 -translate-y-1/2" />
-              
+
               <div className="relative space-y-8">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-[#b59a6d]/10 flex items-center justify-center text-[#b59a6d]">
@@ -840,70 +779,26 @@ export default function App() {
                   </p>
                 </div>
 
-                <div className="p-6 bg-[#b59a6d]/5 rounded-2xl border border-[#b59a6d]/10 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Heart className="w-4 h-4 text-[#b59a6d]" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#b59a6d]">{t('donationTitle')}</h3>
-                  </div>
-                  <p className="text-[#9ca3af] text-xs leading-relaxed">
-                    {t('donationDesc')}
-                  </p>
-                  <div className="bg-[#0c0d10] p-4 rounded-xl border border-[#1f2128] space-y-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase tracking-widest text-[#4a4b4e] font-bold">Bank Transfer (BCA)</span>
-                      <span className="text-sm font-mono text-[#f0f1f3] select-all">3771669164 a/n Aradea Wisnu</span>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[
+                    ['Project', 'ThesisAI helps researchers upload sources, generate outlines, draft chapters, manage revisions, and export polished documents from one responsive workspace.'],
+                    ['How it works', 'The app ingests URLs, text, PDFs, TXT, and Markdown, routes the context through the AI service, then keeps source markers visible so users can verify the final draft.'],
+                    ['FAQ', 'Wallet connection is optional for writing. Stacks support enables STX donations now and prepares the app for future Clarity-based research proof features.'],
+                  ].map(([title, description]) => (
+                    <div key={title} className="rounded-2xl border border-[#b59a6d]/10 bg-[#b59a6d]/5 p-4">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#b59a6d]">{title}</h3>
+                      <p className="mt-3 text-xs leading-6 text-[#9ca3af]">{description}</p>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase tracking-widest text-[#4a4b4e] font-bold">Crypto (EVM)</span>
-                      <span className="text-[10px] font-mono text-[#f0f1f3] break-all select-all">0x2A6b5204B83C7619c90c4EB6b5365AA0b7d912F7</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase tracking-widest text-[#4a4b4e] font-bold">Crypto (Solana)</span>
-                      <span className="text-[10px] font-mono text-[#f0f1f3] break-all select-all">4ZZtf84h3vTt7hVdTtq1YZZkS587WJifTrs5b9eKXmUb</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <button 
-                  onClick={() => setShowAbout(false)} 
+                <button
+                  onClick={() => setShowAbout(false)}
                   className="w-full py-4 text-[10px] font-black uppercase tracking-[0.3em] text-[#4a4b4e] hover:text-[#f0f1f3] transition-colors border-t border-[#1f2128] pt-8"
                 >
                   Close Window
                 </button>
               </div>
-            </motion.div>
-          </div>
-        )}
-        {showCoffee && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#0c0d10]/95 backdrop-blur-md" onClick={() => setShowCoffee(false)}>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={e => e.stopPropagation()} 
-              className="bg-[#111318] w-full max-w-sm p-8 rounded-[2.5rem] border border-[#1f2128] shadow-2xl space-y-6"
-            >
-              <h2 className="text-xl font-bold text-[#f0f1f3]">Buy me a coffee</h2>
-              <div className="bg-[#0c0d10] p-4 rounded-xl border border-[#1f2128] space-y-4">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-widest text-[#4a4b4e] font-bold">Bank Transfer (BCA)</span>
-                  <span className="text-sm font-mono text-[#f0f1f3] select-all">3771669164 a/n Aradea Wisnu</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-widest text-[#4a4b4e] font-bold">Crypto (EVM)</span>
-                  <span className="text-[10px] font-mono text-[#f0f1f3] break-all select-all">0x2A6b5204B83C7619c90c4EB6b5365AA0b7d912F7</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-widest text-[#4a4b4e] font-bold">Crypto (Solana)</span>
-                  <span className="text-[10px] font-mono text-[#f0f1f3] break-all select-all">4ZZtf84h3vTt7hVdTtq1YZZkS587WJifTrs5b9eKXmUb</span>
-                </div>
-              </div>
-              <button 
-                  onClick={() => setShowCoffee(false)} 
-                  className="w-full py-3 bg-[#b59a6d] rounded-xl text-black font-bold uppercase tracking-widest text-xs hover:bg-[#a38a60] transition-colors"
-                >
-                  Close
-                </button>
             </motion.div>
           </div>
         )}
@@ -920,7 +815,7 @@ export default function App() {
               {t('tagline')}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 lg:gap-4">
             <button onClick={() => setShowAbout(true)} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4a4b4e] hover:text-[#b59a6d] transition mr-2">
               <Info className="w-3.5 h-3.5" />
@@ -934,9 +829,14 @@ export default function App() {
                 </button>
               </nav>
             )}
-            <button onClick={() => setLang(lang === 'en' ? 'id' : 'en')} className="flex items-center gap-2 px-2 lg:px-3 py-1.5 rounded-lg border border-[#1f2128] hover:bg-[#1f2128] transition text-[10px] font-bold uppercase tracking-wider text-[#9ca3af]">
-              <Globe className="w-3 h-3" />
-              <span className="hidden sm:inline">{lang === 'en' ? 'English' : 'Indo'}</span>
+            <button
+              onClick={() => stacksWallet.connectWallet().catch(() => undefined)}
+              disabled={stacksWallet.isConnecting}
+              className="hidden sm:flex items-center gap-2 px-3 lg:px-4 py-2 rounded-xl border border-[#f4c95d]/25 bg-[#111318] hover:bg-[#f4c95d]/10 transition text-[10px] font-black uppercase tracking-wider text-[#f4c95d] disabled:opacity-60"
+              title="Connect a Stacks wallet"
+            >
+              {stacksWallet.isConnecting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wallet className="w-3 h-3" />}
+              <span>{stacksWallet.isConnected && stacksWallet.address ? `${stacksWallet.address.slice(0, 4)}...${stacksWallet.address.slice(-4)}` : 'Connect Stacks'}</span>
             </button>
             {!user ? (
                <button onClick={login} className="text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-[#b59a6d] text-[#0c0d10] rounded-lg hover:bg-[#a38a60] transition shadow-lg shadow-[#b59a6d]/20">{t('signIn')}</button>
@@ -1037,8 +937,8 @@ export default function App() {
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="max-w-2xl">
                     <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#3b2618] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#f4c95d]"><ShieldCheck className="h-3 w-3" /> Submission Ready</div>
-                    <h3 className="text-2xl font-black tracking-tight lg:text-3xl">Premium UX sekarang, on-chain research provenance berikutnya.</h3>
-                    <p className="mt-3 text-sm leading-6 text-[#6f573d]">Ide tambahan: setelah MVP stabil, tambahkan kontrak Clarity untuk mencatat hash dokumen final, badge reviewer, dan insentif sBTC untuk contributor/reviewer sebagai bukti provenance riset.</p>
+                    <h3 className="text-2xl font-black tracking-tight lg:text-3xl">Premium UX today, on-chain research provenance next.</h3>
+                    <p className="mt-3 text-sm leading-6 text-[#6f573d]">Stacks roadmap: anchor final document hashes with Clarity, issue reviewer badges, and add sBTC-aligned incentives for contributors as research provenance evolves.</p>
                   </div>
                   <button onClick={() => setView('generator')} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#3b2618] px-6 py-4 text-[11px] font-black uppercase tracking-[0.22em] text-white transition hover:bg-[#5a3924]"><Rocket className="h-4 w-4 text-[#f4c95d]" /> Start now</button>
                 </div>
@@ -1091,9 +991,9 @@ export default function App() {
                   Autonomous AI Research
                 </motion.div>
                 <h2 className="text-3xl sm:text-4xl lg:text-6xl font-black leading-tight tracking-tighter text-[#f0f1f3]">
-                  {lang === 'en' ? 'Craft Your' : 'Rancang'} <br className="hidden sm:block" />
+                  Craft Your <br className="hidden sm:block" />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#b59a6d] to-[#d4c19c]">
-                    {lang === 'en' ? 'Academic Masterpiece' : 'Karya Akademik Terlengkap'}
+                    Academic Masterpiece
                   </span>
                 </h2>
               </section>
@@ -1151,7 +1051,7 @@ export default function App() {
                       <div className="w-8 h-8 rounded-lg bg-[#b59a6d] text-[#0c0d10] flex items-center justify-center font-bold text-xs">2</div>
                       {t('configureTitle')}
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#4a4b4e] ml-1">{t('major')}</label>
@@ -1170,7 +1070,7 @@ export default function App() {
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#4a4b4e] ml-1">{t('language')}</label>
                         <select value={config.targetLanguage} onChange={e => setConfig({...config, targetLanguage: e.target.value})} className="w-full bg-[#0c0d10] border border-[#1f2128] rounded-xl px-4 py-3.5 text-sm focus:border-[#b59a6d] outline-none">
                           <option>English</option>
-                          <option>Indonesian</option>
+
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -1184,14 +1084,14 @@ export default function App() {
                       <div className="space-y-2 flex flex-col justify-end">
                         <div className="flex items-center justify-between bg-[#0c0d10] border border-[#1f2128] rounded-xl px-4 py-3.5">
                           <label className="text-xs font-bold text-[#f0f1f3]">{t('antiPlagiarism')}</label>
-                          <button 
+                          <button
                             onClick={() => setConfig({...config, antiPlagiarism: !config.antiPlagiarism})}
                             className={cn(
                               "w-10 h-5 rounded-full transition-colors relative",
                               config.antiPlagiarism ? "bg-[#b59a6d]" : "bg-[#1f2128]"
                             )}
                           >
-                            <motion.div 
+                            <motion.div
                               animate={{ x: config.antiPlagiarism ? 22 : 2 }}
                               className="absolute top-1 left-0 w-3 h-3 bg-[#f0f1f3] rounded-full"
                             />
@@ -1255,12 +1155,10 @@ export default function App() {
                         <Share className="w-3 h-3" /> Share
                       </button>
                       <button onClick={handleGenerateReferences} disabled={isGeneratingReferences || generatedThesis.length < structure.chapters.length} className="flex-1 lg:flex-none px-4 lg:px-6 py-3 border border-[#1f2128] text-[#f0f1f3] text-[10px] font-black uppercase rounded-xl tracking-widest hover:bg-[#16181d] transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                        {isGeneratingReferences ? <Loader2 className="w-3 h-3 animate-spin"/> : <BookOpen className="w-3 h-3" />} 
+                        {isGeneratingReferences ? <Loader2 className="w-3 h-3 animate-spin"/> : <BookOpen className="w-3 h-3" />}
                         Auto References
                       </button>
-                      <button onClick={() => setShowCoffee(true)} className="w-full lg:w-auto px-4 lg:px-6 py-3 border border-[#1f2128] text-[#b59a6d] text-[10px] font-black uppercase rounded-xl tracking-widest hover:border-[#b59a6d]/50 transition-colors flex items-center justify-center gap-2">
-                        <Heart className="w-3 h-3" /> Buy me a coffee
-                      </button>
+
                     </div>
                  </div>
                </div>
@@ -1344,25 +1242,25 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* MiniPay & Visitor Counter Group */}
+      {/* Donate & Visitor Counter Group */}
       <div className="fixed bottom-4 right-4 z-[90] flex flex-col items-end gap-3">
         <div className="bg-[#111318] border border-[#1f2128] px-4 py-2 rounded-lg text-[10px] font-mono text-[#b59a6d] shadow-lg">
           {visitorCount} Visitors
         </div>
-        <MiniPayAction />
+        <DonateAction />
       </div>
 
       {/* Footer */}
       <footer className="w-full py-4 text-center text-[10px] text-[#4a4b4e] font-sans tracking-widest uppercase">
-          <div>Powered by @aradeawardana97</div>
-          <div className="mt-1">© 2026 All Rights Reserved</div>
+          <div>Built on the Stacks Layer for Bitcoin-aligned research provenance</div>
+          <div className="mt-1">ThesisAI Service ID 8004 • © 2026</div>
       </footer>
-      
+
       {/* Interactive Chat Assistant */}
-      <ChatAssistant 
-        currentThesis={{ generatedThesis, structure }} 
-        sources={sources} 
-        config={config} 
+      <ChatAssistant
+        currentThesis={{ generatedThesis, structure }}
+        sources={sources}
+        config={config}
       />
     </div>
   );

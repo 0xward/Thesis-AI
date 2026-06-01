@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --external:vite --outfile=dist/server.cjs",
+    "start": "NODE_ENV=production node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -40,9 +40,7 @@
     "react-router-dom": "^7.14.2",
     "tailwind-merge": "^3.5.0",
     "turndown": "^7.2.4",
-    "viem": "^2.48.8",
     "vite": "^6.2.3",
-    "wagmi": "^3.6.9",
     "zod": "^4.4.2"
   },
   "devDependencies": {

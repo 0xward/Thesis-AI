@@ -254,7 +254,7 @@ async function startServer() {
             validateStatus: (status) => status < 400
           });
         } catch (proxyError: any) {
-          return res.status(500).json({ 
+          return res.status(500).json({
             error: 'Website tidak dapat diakses.',
             detail: 'Website kemungkinan memblokir akses otomatis atau sedang down. Disarankan gunakan fitur upload PDF atau copy-paste teks secara manual.'
           });
@@ -271,13 +271,13 @@ async function startServer() {
 
       // Default to HTML handling
       const html = buffer.toString('utf-8');
-      
+
       // Try Readability first if it's likely an article
       try {
         const { JSDOM } = await import('jsdom');
         const { Readability } = await import('@mozilla/readability');
         const TurndownService = (await import('turndown')).default;
-        
+
         const dom = new JSDOM(html, { url });
         const reader = new Readability(dom.window.document);
         const article = reader.parse();
@@ -285,12 +285,12 @@ async function startServer() {
         if (article && article.content) {
           const turndownService = new TurndownService();
           const markdown = turndownService.turndown(article.content);
-          
-          return res.json({ 
-            text: `Title: ${article.title}\n\n${markdown}`.substring(0, 150000), 
+
+          return res.json({
+            text: `Title: ${article.title}\n\n${markdown}`.substring(0, 150000),
             title: article.title,
             excerpt: article.excerpt,
-            type: 'html-readability' 
+            type: 'html-readability'
           });
         }
       } catch (readError) {
@@ -300,27 +300,27 @@ async function startServer() {
       // Fallback to basic cheerio if readability fails or is too heavy
       const $ = cheerio.load(html);
       $('script, style, noscript, iframe, img, svg, nav, footer, header, meta, link').remove();
-      
+
       // Try to find main content area
       const mainText = $('main, article, .content, #content, .post, .article').text().replace(/\s+/g, ' ').trim();
       const text = mainText || $('body').text().replace(/\s+/g, ' ').trim();
 
       if (!text || text.length < 100) {
-        return res.status(422).json({ 
+        return res.status(422).json({
           error: 'Konten tidak dapat diekstrak.',
-          detail: 'Halaman ini mungkin dinamis (memerlukan JavaScript) atau tidak memiliki teks yang cukup. Coba copy-paste teks langsung.' 
+          detail: 'Halaman ini mungkin dinamis (memerlukan JavaScript) atau tidak memiliki teks yang cukup. Coba copy-paste teks langsung.'
         });
       }
 
-      return res.json({ 
-        text: text.substring(0, 100000), 
+      return res.json({
+        text: text.substring(0, 100000),
         title: $('title').text() || url,
-        type: 'html-basic' 
+        type: 'html-basic'
       });
 
     } catch (error: any) {
       console.error('Fetch URL error:', error.message);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Gagal memproses konten: ' + error.message,
         detail: 'Terjadi kesalahan internal. Pastikan URL valid dan dapat diakses publik.'
       });
@@ -336,16 +336,16 @@ async function startServer() {
       const { marked } = await import('marked');
       const htmlToDocxModule = await import('html-to-docx');
       const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
-      
+
       const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
-      
+
       if (!generator) {
         throw new Error('Fallback to basic generator failed: HTMLToDOCX is not defined');
       }
 
       // Convert Markdown to HTML
       const htmlContent = await marked.parse(markdown);
-      
+
       // Add font and styling wrapper for DOCX
       // Inject page breaks and better formatting for BAB headers
       const processedHtml = htmlContent.replace(/<h1>BAB (.*?)[:\-\n](.*?)<\/h1>/gi, (match, bab, title) => {
@@ -353,19 +353,19 @@ async function startServer() {
           BAB ${bab.trim()}<br>${title.trim()}
         </h1>`;
       });
-      
+
       const finalHtml = processedHtml.replace(/<h1>(?!BAB)(.*?)<\/h1>/gi, '<div style="page-break-before: always;"></div><h1 style="text-align: center;">$1</h1>');
 
       const styledHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2;">${finalHtml}</div></body></html>`;
 
-      // Indonesian Skripsi Margins (Twips): 
+      // Academic thesis margins (Twips):
       // Top 3cm = 1701, Bottom 3cm = 1701, Right 3cm = 1701, Left 4cm = 2268
       const docxBuffer = await generator(styledHtml, null, {
         title: title || 'Thesis',
         margins: { top: 1700, right: 1700, bottom: 1700, left: 2270 },
         pageSize: { width: 11906, height: 16838 } // A4 Size in twips
       });
-      
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename="${(title || 'Thesis').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx"`);
       res.send(docxBuffer);
@@ -397,7 +397,7 @@ async function startServer() {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-  
+
   return app;
 }
 
