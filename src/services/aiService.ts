@@ -1,36 +1,3 @@
-import { GoogleGenAI, Type } from '@google/genai';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-const PRIMARY_MODEL = "gemini-3-flash-preview";
-const FALLBACK_MODELS = [
-  "gemini-3.1-pro-preview",
-  "gemini-2.0-flash-exp",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro"
-];
-
-async function callWithFallback(fn: (model: string) => Promise<any>) {
-  const allModels = [PRIMARY_MODEL, ...FALLBACK_MODELS];
-  let lastError: any = null;
-
-  for (const model of allModels) {
-    try {
-      console.log(`Attempting generation with model: ${model}`);
-      return await fn(model);
-    } catch (e: any) {
-      lastError = e;
-      const errorMsg = e.message?.toLowerCase() || "";
-      if (errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("limit")) {
-        console.warn(`Quota reached for ${model}, trying fallback...`);
-        continue;
-      }
-      throw e; // If it's not a quota error, throw it immediately
-    }
-  }
-  throw lastError;
-}
-
 export interface ThesisConfig {
   targetLanguage: string;
   major: string;
@@ -59,152 +26,37 @@ export interface ChapterDefinition {
   subchapters: string[];
 }
 
+async function postJson<T>(path: string, payload: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `Request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
 
 export async function chatWithAgent(message: string, currentThesis: any, sources: ResearchSource[], config: ThesisConfig): Promise<string> {
-  const thesisContent = currentThesis ? currentThesis.generatedThesis.map((ch: any) => `# ${ch.chapterTitle}\n${ch.content}`).join('\n\n') : 'No thesis generated yet.';
-  
-  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID. You assist the user in writing and reviewing their thesis.
-Respond to the user's message in ${config.targetLanguage}.
-Tone: Helpful, academic, concise.
-
-Current Thesis Draft Context (Partial or Full):
-${thesisContent.substring(0, 40000)}
-
-User Message:
-${message}
-`;
-
-  const response = await callWithFallback((model) => 
-    ai.models.generateContent({
-      model,
-      contents: prompt,
-    })
-  );
-
-  return response.text || "No response generated.";
+  const response = await postJson<{ text: string }>('/api/ai/chat', { message, currentThesis, sources, config });
+  return response.text || 'No response generated.';
 }
 
 export async function generateReferences(sources: ResearchSource[], config: ThesisConfig): Promise<{ chapterTitle: string, content: string }> {
-  const sourceTexts = sources.map((s, i) => `Source ${i + 1} (${s.title || 'Untitled'}):\n${s.content.substring(0, 5000)}`).join('\n\n---\n\n');
-
-  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID.
-Based on the provided sources, generate a complete "References" (or "Daftar Pustaka" if Indonesian) list in the ${config.citationStyle} format.
-Output ONLY the markdown content for this chapter, including an H1 heading (e.g. "# References").
-You must infer the authors, publication year, title, and publisher/URL based on the source text if possible. If unavailable, use a valid placeholder format.
-
-Sources:
-${sourceTexts}
-`;
-
-  const response = await callWithFallback((model) => 
-    ai.models.generateContent({
-      model,
-      contents: prompt,
-    })
-  );
-
-  const titleEn = "References";
-  const titleId = "Daftar Pustaka";
-  return {
-    chapterTitle: config.targetLanguage.toLowerCase() === 'indonesian' ? titleId : titleEn,
-    content: response.text || "No references could be generated."
-  }
+  return postJson<{ chapterTitle: string, content: string }>('/api/ai/references', { sources, config });
 }
 
 export async function generateTitleOptions(sources: ResearchSource[], config: ThesisConfig): Promise<string[]> {
-
-  const sourceTexts = sources.map((s, i) => `Source ${i + 1}:\n${s.content.substring(0, 10000)}`).join('\n\n---\n\n');
-  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID.
-Based on the provided sources and configuration, generate 5 formal, convincing thesis title options that align with academic standards.
-Academic Major: ${config.major}
-Tone/Formal: ${config.writingStyle}
-Language: ${config.targetLanguage}
-Level: ${config.thesisLevel}
-
-Sources:
-${sourceTexts}
-
-Return a JSON array of strings.`;
-
-  const response = await callWithFallback((model) => 
-    ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING, description: "A highly academic and formal thesis title" }
-        }
-      }
-    })
-  );
-
-  const text = response.text || "[]";
-  try {
-    return JSON.parse(text) as string[];
-  } catch (e) {
-    console.error("Failed to parse JSON response:", text);
-    throw new Error("Failed to generate titles.");
-  }
+  const response = await postJson<{ titles: string[] }>('/api/ai/titles', { sources, config });
+  return response.titles;
 }
 
 export async function generateThesisStructure(sources: ResearchSource[], config: ThesisConfig, customTitle?: string): Promise<ThesisStructure> {
-  const sourceTexts = sources.map((s, i) => `Source ${i + 1}:\n${s.content.substring(0, 50000)}`).join('\n\n---\n\n');
-  
-  const lengthGuidance = config.contentLength === 'Short' ? '5 focus chapters' : config.contentLength === 'Comprehensive' ? '8-10 extensive chapters' : '6-7 standard chapters';
-
-  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID.
-Based on the provided sources, generate a complete ${config.thesisLevel} thesis structure in ${config.targetLanguage}.
-Academic Major: ${config.major}
-Tone/Formal: ${config.writingStyle}
-Target Complexity: ${lengthGuidance}
-
-${customTitle ? `STRICT INSTRUCTION: Use exactly this title for the thesis: "${customTitle}"` : "Generate a formal thesis title, and a structured array of chapters including standard sections (Introduction, Literature Review, Methodology, Results, Conclusion)."}
-
-Sources:
-${sourceTexts}
-`;
-
-  const response = await callWithFallback((model) =>
-    ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: "Formal thesis title" },
-            chapters: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  chapter_title: { type: Type.STRING, description: "Title of the chapter" },
-                  summary: { type: Type.STRING, description: "Brief description of what this chapter will cover" },
-                  subchapters: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  }
-                },
-                required: ["chapter_title", "summary", "subchapters"]
-              }
-            }
-          },
-          required: ["title", "chapters"]
-        }
-      }
-    })
-  );
-
-  const text = response.text || "{}";
-  try {
-    return JSON.parse(text) as ThesisStructure;
-  } catch (e) {
-    console.error("Failed to parse JSON response:", text);
-    throw new Error("Failed to generate structure.");
-  }
+  return postJson<ThesisStructure>('/api/ai/structure', { sources, config, customTitle });
 }
 
 export async function generateChapterContentStream(
@@ -213,47 +65,28 @@ export async function generateChapterContentStream(
   sources: ResearchSource[],
   config: ThesisConfig,
   previousContext: string = ""
-) {
-  const sourceTexts = sources.map((s, i) => `Source ${i + 1} (${s.title || 'Untitled'}):\n${s.content.substring(0, 50000)}`).join('\n\n---\n\n');
-  
-  const lengthGuidance = config.contentLength === 'Short' ? 'concise and direct' : config.contentLength === 'Comprehensive' ? 'extremely detailed, analytical, and extensive' : 'detailed';
+): Promise<AsyncGenerator<{ text: string }>> {
+  const response = await fetch('/api/ai/chapter-stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chapter, fullStructure, sources, config, previousContext }),
+  });
 
-  const antiPlagiarismInstruction = config.antiPlagiarism ? `
-### ANTI-PLAGIARISM DIRECTIVE
-You MUST rewrite and paraphrase all content naturally. DO NOT copy directly from the sources. Maintain the original meaning and accuracy but ensure the phrasing is entirely novel and original. Synthesize multiple points instead of quoting directly where possible to reduce similarity scores. Ensure the output sounds human-written, academically valid, and highly original.
-` : "";
+  if (!response.ok || !response.body) {
+    const detail = await response.text();
+    throw new Error(detail || `Streaming request failed with status ${response.status}`);
+  }
 
-  const prompt = `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID, writing a ${config.thesisLevel} thesis for a ${config.major} major in ${config.targetLanguage}.
-Style: ${config.writingStyle}
-Target Depth: ${lengthGuidance}
+  async function* streamText() {
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      if (text) yield { text };
+    }
+  }
 
-Thesis Title: ${fullStructure.title}
-
-Write the full contents for the following chapter in Markdown format. The generated chapter should be comprehensive, academically rigorous, use formal formatting, and synthesize the source material instead of just copying it. Expand ideas intelligently. Use inline citations where relevant following the ${config.citationStyle} citation style format. CRITICAL: You must ALSO append the source index in brackets as a special tag immediately after the citation, formatted EXACTLY as \`[SRC_1]\`, \`[SRC_2]\`, etc., corresponding to the Source Number. This is required for the UI to map the source.
-
-Chapter Title: ${chapter.chapter_title}
-Chapter Goals/Summary: ${chapter.summary}
-Subchapters to include:
-${chapter.subchapters.map(s => "- " + s).join("\n")}
-
-### RULES
-1. Write ONLY the content for this specific chapter. Do not output anything else.
-2. Use Markdown formatting. Start with an H1 heading for the chapter title, and H2 for subchapters.
-3. Be extensive, professional, and detailed. DO NOT output a short summary, write detailed academic paragraphs simulating a real human researcher.
-${config.contentLength === 'Comprehensive' ? '4. Aim for high word count (at least 2000-3000 words for this chapter if possible).' : ''}
-4. Maintain continuity.
-${antiPlagiarismInstruction}
-### PREVIOUS CHAPTERS CONTEXT (For continuity):
-${previousContext ? previousContext : "None."}
-
-### SOURCE MATERIAL:
-${sourceTexts}
-`;
-
-  return await callWithFallback((model) => 
-    ai.models.generateContentStream({
-      model,
-      contents: prompt,
-    })
-  );
+  return streamText();
 }

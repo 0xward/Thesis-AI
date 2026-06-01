@@ -15,6 +15,83 @@ async function parsePdfBuffer(buffer: Buffer) {
   }
 }
 
+
+const GROQ_PRIMARY_MODEL = process.env.GROQ_PRIMARY_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_FALLBACK_MODELS = (process.env.GROQ_FALLBACK_MODELS || 'qwen/qwen3-32b,deepseek-r1-distill-llama-70b,llama-3.1-8b-instant')
+  .split(',')
+  .map((model) => model.trim())
+  .filter(Boolean);
+
+function extractJson(text: string) {
+  const cleaned = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+  const firstObject = cleaned.indexOf('{');
+  const firstArray = cleaned.indexOf('[');
+  const start = firstArray !== -1 && (firstArray < firstObject || firstObject === -1) ? firstArray : firstObject;
+  if (start === -1) return cleaned;
+  const end = cleaned[start] === '[' ? cleaned.lastIndexOf(']') : cleaned.lastIndexOf('}');
+  return end === -1 ? cleaned.slice(start) : cleaned.slice(start, end + 1);
+}
+
+async function callGroq(messages: any[], options: { json?: boolean; stream?: boolean; temperature?: number; maxTokens?: number } = {}) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is not configured. Add it to your server environment before generating research.');
+  }
+
+  const models = [GROQ_PRIMARY_MODEL, ...GROQ_FALLBACK_MODELS];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: options.temperature ?? 0.35,
+          max_tokens: options.maxTokens ?? 8192,
+          stream: Boolean(options.stream),
+          ...(options.json ? { response_format: { type: 'json_object' } } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        if ([429, 500, 502, 503, 504].includes(response.status) || detail.toLowerCase().includes('model')) {
+          lastError = new Error(detail);
+          continue;
+        }
+        throw new Error(detail);
+      }
+
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      if (!String(error?.message || '').toLowerCase().includes('fetch')) throw error;
+    }
+  }
+
+  throw lastError || new Error('Groq generation failed on all configured models.');
+}
+
+async function groqText(messages: any[], options: { json?: boolean; temperature?: number; maxTokens?: number } = {}) {
+  const response = await callGroq(messages, options);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+function thesisSystemPrompt(targetLanguage = 'English') {
+  return `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID. Respond in ${targetLanguage}. Act as a senior university thesis supervisor and professional academic writer. Prioritize academic integrity, source-grounded synthesis, clear citations, and useful research workflows. Never invent data, authors, years, statistics, or citations. If evidence is missing, state the limitation academically and suggest what source is needed.`;
+}
+
+function sourceBlock(sources: any[], limit = 50000) {
+  return (sources || []).map((s, i) => `Source ${i + 1} (${s.title || 'Untitled'}):\n${String(s.content || '').substring(0, limit)}`).join('\n\n---\n\n');
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -25,6 +102,153 @@ async function startServer() {
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+
+  app.post('/api/parse-pdf', async (req, res) => {
+    try {
+      const { fileBase64, title } = req.body;
+      if (!fileBase64) return res.status(400).json({ error: 'fileBase64 is required' });
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const text = await parsePdfBuffer(buffer);
+      return res.json({ text: text.substring(0, 150000), title: title || 'Uploaded PDF', type: 'pdf' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to parse PDF' });
+    }
+  });
+
+  app.post('/api/ai/chat', async (req, res) => {
+    try {
+      const { message, currentThesis, config } = req.body;
+      const thesisContent = currentThesis ? (currentThesis.generatedThesis || []).map((ch: any) => `# ${ch.chapterTitle}\n${ch.content}`).join('\n\n') : 'No thesis generated yet.';
+      const text = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: `Current thesis draft context:\n${thesisContent.substring(0, 40000)}\n\nUser message:\n${message}` }
+      ], { temperature: 0.25, maxTokens: 4096 });
+      res.json({ text });
+    } catch (error: any) {
+      res.status(500).send(error.message || 'AI chat failed');
+    }
+  });
+
+  app.post('/api/ai/titles', async (req, res) => {
+    try {
+      const { sources, config } = req.body;
+      const prompt = `Generate 5 formal, convincing thesis title options as JSON only: {"titles":["..."]}.\nAcademic Major: ${config.major}\nTone/Formal: ${config.writingStyle}\nLanguage: ${config.targetLanguage}\nLevel: ${config.thesisLevel}\n\nSources:\n${sourceBlock(sources, 10000)}`;
+      const text = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { json: true, temperature: 0.4, maxTokens: 2048 });
+      const parsed = JSON.parse(extractJson(text));
+      res.json({ titles: Array.isArray(parsed) ? parsed : parsed.titles || [] });
+    } catch (error: any) {
+      res.status(500).send(error.message || 'Title generation failed');
+    }
+  });
+
+  app.post('/api/ai/structure', async (req, res) => {
+    try {
+      const { sources, config, customTitle } = req.body;
+      const lengthGuidance = config.contentLength === 'Short' ? '5 focus chapters' : config.contentLength === 'Comprehensive' ? '8-10 extensive chapters' : '6-7 standard chapters';
+      const prompt = `Generate a complete, university-standard ${config.thesisLevel} thesis structure as JSON only with shape {"title":"...","chapters":[{"chapter_title":"...","summary":"...","subchapters":["..."]}]}.\nAcademic Major: ${config.major}\nTone/Formal: ${config.writingStyle}\nTarget Complexity: ${lengthGuidance}\n${customTitle ? `Use exactly this title: "${customTitle}"` : 'Generate a formal title and standard thesis sections.'}\nRules: use only source-supported scope, include methodology and conclusion sections where suitable, and do not invent findings not supported by the sources.\n\nSources:\n${sourceBlock(sources, 50000)}`;
+      const text = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { json: true, temperature: 0.25, maxTokens: 4096 });
+      res.json(JSON.parse(extractJson(text)));
+    } catch (error: any) {
+      res.status(500).send(error.message || 'Structure generation failed');
+    }
+  });
+
+  app.post('/api/ai/references', async (req, res) => {
+    try {
+      const { sources, config } = req.body;
+      const prompt = `Based on the provided sources, generate a complete References chapter in ${config.citationStyle}. Output markdown only with an H1 heading. Infer metadata where possible; use valid placeholder formatting only when necessary.\n\nSources:\n${sourceBlock(sources, 5000)}`;
+      const content = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { temperature: 0.2, maxTokens: 4096 });
+      res.json({
+        chapterTitle: String(config.targetLanguage || '').toLowerCase() === 'indonesian' ? 'Daftar Pustaka' : 'References',
+        content: content || 'No references could be generated.',
+      });
+    } catch (error: any) {
+      res.status(500).send(error.message || 'Reference generation failed');
+    }
+  });
+
+  app.post('/api/ai/chapter-stream', async (req, res) => {
+    try {
+      const { chapter, fullStructure, sources, config, previousContext } = req.body;
+      const lengthGuidance = config.contentLength === 'Short' ? 'concise and direct' : config.contentLength === 'Comprehensive' ? 'extremely detailed, analytical, and extensive' : 'detailed';
+      const antiPlagiarismInstruction = config.antiPlagiarism ? 'Rewrite and paraphrase naturally. Do not copy directly from sources. Synthesize multiple points and keep phrasing original while preserving meaning.' : '';
+      const prompt = `Write the full contents for this chapter in Markdown as a professional university thesis chapter.
+Thesis Title: ${fullStructure.title}
+Level/Major: ${config.thesisLevel} / ${config.major}
+Style: ${config.writingStyle}
+Target Depth: ${lengthGuidance}
+Citation Style: ${config.citationStyle}
+Chapter Title: ${chapter.chapter_title}
+Chapter Goals: ${chapter.summary}
+Subchapters:
+${(chapter.subchapters || []).map((s: string) => '- ' + s).join('\n')}
+
+Rules:
+1. Start with an H1 heading for the chapter title; use H2 for subchapters.
+2. Write only this chapter and continue until the chapter is complete. Do not stop mid-sentence.
+3. Add inline citations and append source tags like [SRC_1] immediately after relevant cited claims.
+4. Maintain continuity with previous chapters.
+5. Use formal university thesis prose: objective tone, well-developed paragraphs, no bullet-list overuse, no casual language.
+6. Do not hallucinate. Do not fabricate facts, citations, numbers, authors, dates, tables, or research results. If the sources do not support a claim, write a careful limitation instead.
+7. Keep page-ready formatting: concise H2 headings, coherent paragraphs, and A4-friendly sections.
+${antiPlagiarismInstruction}
+
+Previous context:
+${previousContext || 'None.'}
+
+Source material:
+${sourceBlock(sources, 50000)}`;
+      const groqResponse = await callGroq([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { stream: true, temperature: 0.35, maxTokens: 12000 });
+
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('X-Accel-Buffering', 'no');
+
+      const reader = groqResponse.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error('Groq stream did not return a readable body.');
+
+      let pending = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        pending += decoder.decode(value, { stream: true });
+        const lines = pending.split('\n');
+        pending = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (!data || data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const token = parsed.choices?.[0]?.delta?.content;
+            if (token) res.write(token);
+          } catch {
+            pending = `${line}\\n${pending}`;
+          }
+        }
+      }
+      res.end();
+    } catch (error: any) {
+      if (!res.headersSent) res.status(500).send(error.message || 'Chapter generation failed');
+      else res.end(`\n\nError generating chapter: ${error.message}`);
+    }
   });
 
   app.post('/api/fetch-url', async (req, res) => {
@@ -59,7 +283,7 @@ async function startServer() {
             validateStatus: (status) => status < 400
           });
         } catch (proxyError: any) {
-          return res.status(500).json({ 
+          return res.status(500).json({
             error: 'Website tidak dapat diakses.',
             detail: 'Website kemungkinan memblokir akses otomatis atau sedang down. Disarankan gunakan fitur upload PDF atau copy-paste teks secara manual.'
           });
@@ -76,13 +300,13 @@ async function startServer() {
 
       // Default to HTML handling
       const html = buffer.toString('utf-8');
-      
+
       // Try Readability first if it's likely an article
       try {
         const { JSDOM } = await import('jsdom');
         const { Readability } = await import('@mozilla/readability');
         const TurndownService = (await import('turndown')).default;
-        
+
         const dom = new JSDOM(html, { url });
         const reader = new Readability(dom.window.document);
         const article = reader.parse();
@@ -90,12 +314,12 @@ async function startServer() {
         if (article && article.content) {
           const turndownService = new TurndownService();
           const markdown = turndownService.turndown(article.content);
-          
-          return res.json({ 
-            text: `Title: ${article.title}\n\n${markdown}`.substring(0, 150000), 
+
+          return res.json({
+            text: `Title: ${article.title}\n\n${markdown}`.substring(0, 150000),
             title: article.title,
             excerpt: article.excerpt,
-            type: 'html-readability' 
+            type: 'html-readability'
           });
         }
       } catch (readError) {
@@ -105,27 +329,27 @@ async function startServer() {
       // Fallback to basic cheerio if readability fails or is too heavy
       const $ = cheerio.load(html);
       $('script, style, noscript, iframe, img, svg, nav, footer, header, meta, link').remove();
-      
+
       // Try to find main content area
       const mainText = $('main, article, .content, #content, .post, .article').text().replace(/\s+/g, ' ').trim();
       const text = mainText || $('body').text().replace(/\s+/g, ' ').trim();
 
       if (!text || text.length < 100) {
-        return res.status(422).json({ 
+        return res.status(422).json({
           error: 'Konten tidak dapat diekstrak.',
-          detail: 'Halaman ini mungkin dinamis (memerlukan JavaScript) atau tidak memiliki teks yang cukup. Coba copy-paste teks langsung.' 
+          detail: 'Halaman ini mungkin dinamis (memerlukan JavaScript) atau tidak memiliki teks yang cukup. Coba copy-paste teks langsung.'
         });
       }
 
-      return res.json({ 
-        text: text.substring(0, 100000), 
+      return res.json({
+        text: text.substring(0, 100000),
         title: $('title').text() || url,
-        type: 'html-basic' 
+        type: 'html-basic'
       });
 
     } catch (error: any) {
       console.error('Fetch URL error:', error.message);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Gagal memproses konten: ' + error.message,
         detail: 'Terjadi kesalahan internal. Pastikan URL valid dan dapat diakses publik.'
       });
@@ -141,16 +365,16 @@ async function startServer() {
       const { marked } = await import('marked');
       const htmlToDocxModule = await import('html-to-docx');
       const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
-      
+
       const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
-      
+
       if (!generator) {
         throw new Error('Fallback to basic generator failed: HTMLToDOCX is not defined');
       }
 
       // Convert Markdown to HTML
       const htmlContent = await marked.parse(markdown);
-      
+
       // Add font and styling wrapper for DOCX
       // Inject page breaks and better formatting for BAB headers
       const processedHtml = htmlContent.replace(/<h1>BAB (.*?)[:\-\n](.*?)<\/h1>/gi, (match, bab, title) => {
@@ -158,19 +382,19 @@ async function startServer() {
           BAB ${bab.trim()}<br>${title.trim()}
         </h1>`;
       });
-      
+
       const finalHtml = processedHtml.replace(/<h1>(?!BAB)(.*?)<\/h1>/gi, '<div style="page-break-before: always;"></div><h1 style="text-align: center;">$1</h1>');
 
       const styledHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2;">${finalHtml}</div></body></html>`;
 
-      // Indonesian Skripsi Margins (Twips): 
+      // Indonesian Skripsi Margins (Twips):
       // Top 3cm = 1701, Bottom 3cm = 1701, Right 3cm = 1701, Left 4cm = 2268
       const docxBuffer = await generator(styledHtml, null, {
         title: title || 'Thesis',
         margins: { top: 1700, right: 1700, bottom: 1700, left: 2270 },
         pageSize: { width: 11906, height: 16838 } // A4 Size in twips
       });
-      
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename="${(title || 'Thesis').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx"`);
       res.send(docxBuffer);
@@ -202,7 +426,7 @@ async function startServer() {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-  
+
   return app;
 }
 
