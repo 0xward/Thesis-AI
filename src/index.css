@@ -217,3 +217,54 @@ body {
   border-radius: 0.25rem;
   font-family: var(--font-mono);
 }
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(139, 94, 52, 0.22), transparent 34rem),
+    radial-gradient(circle at bottom right, rgba(244, 201, 93, 0.12), transparent 30rem),
+    #0c0d10;
+}
+
+::selection {
+  background: rgba(244, 201, 93, 0.35);
+  color: #fff8ec;
+}
+
+.luxury-hero {
+  isolation: isolate;
+}
+
+.luxury-hero::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(120deg, rgba(244, 201, 93, 0.35), rgba(255, 255, 255, 0.06), rgba(139, 94, 52, 0.28));
+  filter: blur(22px);
+  opacity: 0.55;
+}
+
+.thesis-grid {
+  background-image:
+    linear-gradient(rgba(244, 201, 93, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 201, 93, 0.09) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 20%, black, transparent 72%);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0c0d10;
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(#8b5e34, #f4c95d);
+  border-radius: 999px;
+}
