@@ -1,8 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_WALLET_CONNECT_PROJECT_ID: string
-  readonly VITE_CELO_WALLET_ADDRESS: string
+  readonly VITE_STACKS_DONATION_ADDRESS: string
   readonly VITE_FIREBASE_PROJECT_ID: string
   readonly VITE_FIREBASE_APP_ID: string
   readonly VITE_FIREBASE_API_KEY: string

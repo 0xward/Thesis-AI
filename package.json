@@ -40,9 +40,7 @@
     "react-router-dom": "^7.14.2",
     "tailwind-merge": "^3.5.0",
     "turndown": "^7.2.4",
-    "viem": "^2.48.8",
     "vite": "^6.2.3",
-    "wagmi": "^3.6.9",
     "zod": "^4.4.2"
   },
   "devDependencies": {

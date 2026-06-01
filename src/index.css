@@ -34,7 +34,7 @@ body {
 @media (min-width: 1024px) {
   .academic-paper {
     margin: 4rem auto;
-    /* Standard Indonesian Skripsi Margins: Left 4cm, Top 3cm, Right 3cm, Bottom 3cm */
+    /* Standard Academic thesis margins: Left 4cm, Top 3cm, Right 3cm, Bottom 3cm */
     padding: 30mm 30mm 30mm 40mm !important;
     box-shadow: 0 0 60px rgba(0,0,0,0.2);
     font-size: 12pt; /* Professional print size */
@@ -73,7 +73,7 @@ body {
 }
 
 .academic-paper-serif p {
-  text-indent: 1.25cm; /* Standard Indonesian thesis indent */
+  text-indent: 1.25cm; /* Standard academic thesis indent */
   margin-bottom: 0;
 }
 
