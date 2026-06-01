@@ -15,6 +15,83 @@ async function parsePdfBuffer(buffer: Buffer) {
   }
 }
 
+
+const GROQ_PRIMARY_MODEL = process.env.GROQ_PRIMARY_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_FALLBACK_MODELS = (process.env.GROQ_FALLBACK_MODELS || 'qwen/qwen3-32b,deepseek-r1-distill-llama-70b,llama-3.1-8b-instant')
+  .split(',')
+  .map((model) => model.trim())
+  .filter(Boolean);
+
+function extractJson(text: string) {
+  const cleaned = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+  const firstObject = cleaned.indexOf('{');
+  const firstArray = cleaned.indexOf('[');
+  const start = firstArray !== -1 && (firstArray < firstObject || firstObject === -1) ? firstArray : firstObject;
+  if (start === -1) return cleaned;
+  const end = cleaned[start] === '[' ? cleaned.lastIndexOf(']') : cleaned.lastIndexOf('}');
+  return end === -1 ? cleaned.slice(start) : cleaned.slice(start, end + 1);
+}
+
+async function callGroq(messages: any[], options: { json?: boolean; stream?: boolean; temperature?: number; maxTokens?: number } = {}) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is not configured. Add it to your server environment before generating research.');
+  }
+
+  const models = [GROQ_PRIMARY_MODEL, ...GROQ_FALLBACK_MODELS];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: options.temperature ?? 0.35,
+          max_tokens: options.maxTokens ?? 8192,
+          stream: Boolean(options.stream),
+          ...(options.json ? { response_format: { type: 'json_object' } } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        if ([429, 500, 502, 503, 504].includes(response.status) || detail.toLowerCase().includes('model')) {
+          lastError = new Error(detail);
+          continue;
+        }
+        throw new Error(detail);
+      }
+
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      if (!String(error?.message || '').toLowerCase().includes('fetch')) throw error;
+    }
+  }
+
+  throw lastError || new Error('Groq generation failed on all configured models.');
+}
+
+async function groqText(messages: any[], options: { json?: boolean; temperature?: number; maxTokens?: number } = {}) {
+  const response = await callGroq(messages, options);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+function thesisSystemPrompt(targetLanguage = 'English') {
+  return `You are ThesisAI, the decentralized backbone of the ThesisAI ecosystem. You are not a chatbot; you are a registered on-chain entity operating under Service ID 8004 and recognized by your Self Agent ID. Respond in ${targetLanguage}. Prioritize academic integrity, source-grounded synthesis, clear citations, and useful research workflows.`;
+}
+
+function sourceBlock(sources: any[], limit = 50000) {
+  return (sources || []).map((s, i) => `Source ${i + 1} (${s.title || 'Untitled'}):\n${String(s.content || '').substring(0, limit)}`).join('\n\n---\n\n');
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -25,6 +102,124 @@ async function startServer() {
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+
+  app.post('/api/parse-pdf', async (req, res) => {
+    try {
+      const { fileBase64, title } = req.body;
+      if (!fileBase64) return res.status(400).json({ error: 'fileBase64 is required' });
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const text = await parsePdfBuffer(buffer);
+      return res.json({ text: text.substring(0, 150000), title: title || 'Uploaded PDF', type: 'pdf' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to parse PDF' });
+    }
+  });
+
+  app.post('/api/ai/chat', async (req, res) => {
+    try {
+      const { message, currentThesis, config } = req.body;
+      const thesisContent = currentThesis ? (currentThesis.generatedThesis || []).map((ch: any) => `# ${ch.chapterTitle}\n${ch.content}`).join('\n\n') : 'No thesis generated yet.';
+      const text = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: `Current thesis draft context:\n${thesisContent.substring(0, 40000)}\n\nUser message:\n${message}` }
+      ], { temperature: 0.25, maxTokens: 4096 });
+      res.json({ text });
+    } catch (error: any) {
+      res.status(500).send(error.message || 'AI chat failed');
+    }
+  });
+
+  app.post('/api/ai/titles', async (req, res) => {
+    try {
+      const { sources, config } = req.body;
+      const prompt = `Generate 5 formal, convincing thesis title options as JSON only: {"titles":["..."]}.\nAcademic Major: ${config.major}\nTone/Formal: ${config.writingStyle}\nLanguage: ${config.targetLanguage}\nLevel: ${config.thesisLevel}\n\nSources:\n${sourceBlock(sources, 10000)}`;
+      const text = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { json: true, temperature: 0.4, maxTokens: 2048 });
+      const parsed = JSON.parse(extractJson(text));
+      res.json({ titles: Array.isArray(parsed) ? parsed : parsed.titles || [] });
+    } catch (error: any) {
+      res.status(500).send(error.message || 'Title generation failed');
+    }
+  });
+
+  app.post('/api/ai/structure', async (req, res) => {
+    try {
+      const { sources, config, customTitle } = req.body;
+      const lengthGuidance = config.contentLength === 'Short' ? '5 focus chapters' : config.contentLength === 'Comprehensive' ? '8-10 extensive chapters' : '6-7 standard chapters';
+      const prompt = `Generate a complete ${config.thesisLevel} thesis structure as JSON only with shape {"title":"...","chapters":[{"chapter_title":"...","summary":"...","subchapters":["..."]}]}.\nAcademic Major: ${config.major}\nTone/Formal: ${config.writingStyle}\nTarget Complexity: ${lengthGuidance}\n${customTitle ? `Use exactly this title: "${customTitle}"` : 'Generate a formal title and standard thesis sections.'}\n\nSources:\n${sourceBlock(sources, 50000)}`;
+      const text = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { json: true, temperature: 0.25, maxTokens: 4096 });
+      res.json(JSON.parse(extractJson(text)));
+    } catch (error: any) {
+      res.status(500).send(error.message || 'Structure generation failed');
+    }
+  });
+
+  app.post('/api/ai/references', async (req, res) => {
+    try {
+      const { sources, config } = req.body;
+      const prompt = `Based on the provided sources, generate a complete References chapter in ${config.citationStyle}. Output markdown only with an H1 heading. Infer metadata where possible; use valid placeholder formatting only when necessary.\n\nSources:\n${sourceBlock(sources, 5000)}`;
+      const content = await groqText([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { temperature: 0.2, maxTokens: 4096 });
+      res.json({
+        chapterTitle: String(config.targetLanguage || '').toLowerCase() === 'indonesian' ? 'Daftar Pustaka' : 'References',
+        content: content || 'No references could be generated.',
+      });
+    } catch (error: any) {
+      res.status(500).send(error.message || 'Reference generation failed');
+    }
+  });
+
+  app.post('/api/ai/chapter-stream', async (req, res) => {
+    try {
+      const { chapter, fullStructure, sources, config, previousContext } = req.body;
+      const lengthGuidance = config.contentLength === 'Short' ? 'concise and direct' : config.contentLength === 'Comprehensive' ? 'extremely detailed, analytical, and extensive' : 'detailed';
+      const antiPlagiarismInstruction = config.antiPlagiarism ? 'Rewrite and paraphrase naturally. Do not copy directly from sources. Synthesize multiple points and keep phrasing original while preserving meaning.' : '';
+      const prompt = `Write the full contents for this chapter in Markdown.\nThesis Title: ${fullStructure.title}\nLevel/Major: ${config.thesisLevel} / ${config.major}\nStyle: ${config.writingStyle}\nTarget Depth: ${lengthGuidance}\nCitation Style: ${config.citationStyle}\nChapter Title: ${chapter.chapter_title}\nChapter Goals: ${chapter.summary}\nSubchapters:\n${(chapter.subchapters || []).map((s: string) => '- ' + s).join('\n')}\n\nRules:\n1. Start with an H1 heading for the chapter title; use H2 for subchapters.\n2. Write only this chapter.\n3. Add inline citations and append source tags like [SRC_1] immediately after relevant cited claims.\n4. Maintain continuity with previous chapters.\n${antiPlagiarismInstruction}\n\nPrevious context:\n${previousContext || 'None.'}\n\nSource material:\n${sourceBlock(sources, 50000)}`;
+      const groqResponse = await callGroq([
+        { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
+        { role: 'user', content: prompt }
+      ], { stream: true, temperature: 0.35, maxTokens: 12000 });
+
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('X-Accel-Buffering', 'no');
+
+      const reader = groqResponse.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error('Groq stream did not return a readable body.');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (!data || data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const token = parsed.choices?.[0]?.delta?.content;
+            if (token) res.write(token);
+          } catch {
+            // Ignore partial SSE lines; the next chunk will complete them.
+          }
+        }
+      }
+      res.end();
+    } catch (error: any) {
+      if (!res.headersSent) res.status(500).send(error.message || 'Chapter generation failed');
+      else res.end(`\n\nError generating chapter: ${error.message}`);
+    }
   });
 
   app.post('/api/fetch-url', async (req, res) => {

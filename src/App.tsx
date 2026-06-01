@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Link, Upload, BookOpen, Settings, Play, CheckCircle, Download, Loader2, ArrowRight, ChevronDown, ChevronRight, Wand2, RotateCcw, LogOut, LayoutDashboard, Save, Trash2, Clock, Globe, Info, Heart, Share } from 'lucide-react';
+import { FileText, Link, Upload, BookOpen, Settings, Play, CheckCircle, Download, Loader2, ArrowRight, ChevronDown, ChevronRight, Wand2, RotateCcw, LogOut, LayoutDashboard, Save, Trash2, Clock, Globe, Info, Heart, Share, Sparkles, ShieldCheck, Bitcoin, Network, Wallet, Rocket, Cpu, GraduationCap } from 'lucide-react';
 import { cn } from './lib/utils';
 import axios from 'axios';
 import Markdown from 'react-markdown';
@@ -25,7 +25,7 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showCoffee, setShowCoffee] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<'generator' | 'dashboard'>('generator');
+  const [view, setView] = useState<'landing' | 'generator' | 'dashboard'>('landing');
   const [visitorCount, setVisitorCount] = useState<number>(0);
   const [savedTheses, setSavedTheses] = useState<ThesisData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -109,7 +109,7 @@ export default function App() {
     try {
       await signOut(auth);
       setStep(1);
-      setView('generator');
+      setView('landing');
     } catch (e: any) {
       alert("Logout failed: " + e.message);
     }
@@ -123,6 +123,20 @@ export default function App() {
   const translations = {
     en: {
       tagline: "Autonomous Research Agent",
+      heroBadge: "Bitcoin-secured academic intelligence",
+      heroTitle: "Turn research sources into a polished thesis workspace.",
+      heroDesc: "ThesisAI combines Groq-speed AI, citation-aware drafting, export tooling, and a Bitcoin-secured proof layer roadmap so students can move from raw sources to structured academic work without getting lost.",
+      launchStudio: "Launch Research Studio",
+      connectStacks: "Explore Bitcoin Layer",
+      stacksNote: "Built with a Bitcoin-grade security roadmap in mind: verifiable research provenance, document-hash proofing, and future on-chain validation without confusing the writing flow.",
+      aiModels: "Groq AI Model Mesh",
+      aiModelsDesc: "Routes research tasks across Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, and fast fallback models from the server.",
+      sourceIngestion: "Source Ingestion",
+      sourceIngestionDesc: "Add URLs, paste text, or upload PDF/TXT/MD documents as a guided knowledge base before generation.",
+      thesisWorkflow: "Thesis Workflow",
+      thesisWorkflowDesc: "Generate titles, structures, chapters, references, revisions, and exports in one smooth responsive workspace.",
+      bitcoinLayer: "Bitcoin Proof Layer",
+      bitcoinLayerDesc: "Designed for future proof-of-research, sBTC incentives, and Clarity smart-contract integration.",
       create: "Create",
       dashboard: "Dashboard",
       about: "About",
@@ -171,6 +185,20 @@ export default function App() {
     },
     id: {
       tagline: "Agen Riset Otonom",
+      heroBadge: "Intelijen akademik yang siap diamankan Bitcoin",
+      heroTitle: "Ubah sumber riset menjadi workspace skripsi yang rapi.",
+      heroDesc: "ThesisAI menggabungkan AI berkecepatan Groq, penulisan berbasis sitasi, ekspor dokumen, dan roadmap proof layer berbasis Bitcoin agar mahasiswa tidak bingung dari sumber mentah sampai draft akademik.",
+      launchStudio: "Buka Research Studio",
+      connectStacks: "Eksplor Lapisan Bitcoin",
+      stacksNote: "Dirancang dengan roadmap keamanan berbasis Bitcoin: provenance riset yang dapat diverifikasi, proof hash dokumen, dan validasi on-chain di tahap berikutnya tanpa mengganggu workflow penulisan.",
+      aiModels: "Mesh Model AI Groq",
+      aiModelsDesc: "Mengalihkan tugas riset melalui Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, dan model fallback cepat dari server.",
+      sourceIngestion: "Ingesti Sumber",
+      sourceIngestionDesc: "Tambahkan URL, tempel teks, atau unggah PDF/TXT/MD sebagai pangkalan pengetahuan terpandu sebelum generasi.",
+      thesisWorkflow: "Workflow Skripsi",
+      thesisWorkflowDesc: "Buat judul, struktur, bab, daftar pustaka, revisi, dan ekspor dalam workspace responsif yang smooth.",
+      bitcoinLayer: "Bitcoin Proof Layer",
+      bitcoinLayerDesc: "Disiapkan untuk proof-of-research, insentif sBTC, dan integrasi smart contract Clarity di tahap berikutnya.",
       create: "Buat",
       dashboard: "Dasbor",
       about: "Tentang",
@@ -268,7 +296,9 @@ export default function App() {
 
   const [sources, setSources] = useState<ResearchSource[]>([]);
   const [urlInput, setUrlInput] = useState('');
+  const [textInput, setTextInput] = useState('');
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [isParsingFile, setIsParsingFile] = useState(false);
 
   const [config, setConfig] = useState<ThesisConfig>({
     targetLanguage: 'English',
@@ -358,7 +388,41 @@ export default function App() {
   };
 
   const addTextSource = () => {
-    // Paste text removed
+    const content = textInput.trim();
+    if (!content) return;
+    setSources(prev => [...prev, {
+      type: 'text',
+      title: content.slice(0, 60) || 'Pasted Research Notes',
+      content,
+    }]);
+    setTextInput('');
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsParsingFile(true);
+    try {
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        const buffer = await file.arrayBuffer();
+        const binary = Array.from(new Uint8Array(buffer)).map(byte => String.fromCharCode(byte)).join('');
+        const fileBase64 = btoa(binary);
+        const res = await axios.post('/api/parse-pdf', { fileBase64, title: file.name });
+        setSources(prev => [...prev, { type: 'pdf', title: file.name, content: res.data.text }]);
+      } else {
+        const content = await file.text();
+        setSources(prev => [...prev, { type: 'text', title: file.name, content }]);
+      }
+    } catch (e: any) {
+      alert(`Failed to parse file: ${e.response?.data?.error || e.message}`);
+    } finally {
+      setIsParsingFile(false);
+      event.target.value = '';
+    }
+  };
+
+  const openBitcoinBuilderGuide = () => {
+    window.open('https://www.stacks.co/build/get-started', '_blank', 'noopener,noreferrer');
   };
 
   const removeSource = (index: number) => {
@@ -848,7 +912,7 @@ export default function App() {
       <header className="bg-[#0c0d10] border-b border-[#1f2128] py-4 lg:py-6 px-4 lg:px-8 sticky top-0 z-40 shadow-sm backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-6">
-            <div className="flex items-center gap-2 lg:gap-3 cursor-pointer" onClick={() => { setView('generator'); setStep(1); }}>
+            <div className="flex items-center gap-2 lg:gap-3 cursor-pointer" onClick={() => { setView('landing'); setStep(1); }}>
               <img src="/ThesisAI_Logo.png?v=2" alt="ThesisAI Logo" referrerPolicy="no-referrer" className="w-12 h-12 lg:w-16 lg:h-16 rounded-2xl object-contain bg-[#16181d] p-1 border border-[#b59a6d]/20 shadow-[0_0_20px_rgba(181,154,109,0.1)]" />
               <h1 className="text-xl lg:text-3xl font-bold font-sans tracking-tight text-[#f0f1f3]">ThesisAI</h1>
             </div>
@@ -885,6 +949,103 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 lg:px-6 py-8 lg:py-12">
         <AnimatePresence mode="wait">
+
+          {view === 'landing' && (
+            <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }} className="space-y-12 lg:space-y-20">
+              <section className="relative overflow-hidden rounded-[2rem] lg:rounded-[3rem] border border-[#b59a6d]/20 bg-gradient-to-br from-[#1b120d] via-[#0c0d10] to-[#2a1a10] px-5 py-10 sm:px-8 lg:px-14 lg:py-16 shadow-2xl luxury-hero">
+                <div className="absolute inset-0 thesis-grid opacity-40" />
+                <motion.div animate={{ y: [0, -18, 0], rotate: [0, 2, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }} className="absolute -right-16 top-10 h-56 w-56 rounded-full bg-[#f4c95d]/10 blur-3xl" />
+                <motion.div animate={{ y: [0, 22, 0], rotate: [0, -3, 0] }} transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }} className="absolute -left-20 bottom-0 h-72 w-72 rounded-full bg-[#8b5e34]/20 blur-3xl" />
+
+                <div className="relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+                  <div className="space-y-8">
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-[#f4c95d]/30 bg-[#f4c95d]/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-[#f4c95d]">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {t('heroBadge')}
+                    </motion.div>
+                    <div className="space-y-5">
+                      <h2 className="max-w-4xl text-4xl font-black leading-[0.95] tracking-[-0.06em] text-white sm:text-5xl lg:text-7xl">
+                        {t('heroTitle')}
+                      </h2>
+                      <p className="max-w-2xl text-sm leading-7 text-[#eadfcd]/75 sm:text-base">
+                        {t('heroDesc')}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <button onClick={() => setView('generator')} className="group inline-flex items-center justify-center gap-3 rounded-2xl bg-[#f4c95d] px-6 py-4 text-[11px] font-black uppercase tracking-[0.22em] text-[#1a120c] shadow-2xl shadow-[#f4c95d]/20 transition hover:-translate-y-0.5 hover:bg-[#ffe18a]">
+                        {t('launchStudio')}
+                        <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                      </button>
+                      <button onClick={openBitcoinBuilderGuide} className="inline-flex items-center justify-center gap-3 rounded-2xl border border-[#f4c95d]/25 bg-white/5 px-6 py-4 text-[11px] font-black uppercase tracking-[0.22em] text-[#f8ead2] backdrop-blur transition hover:border-[#f4c95d]/60 hover:bg-white/10">
+                        <Bitcoin className="h-4 w-4 text-[#f4c95d]" />
+                        {t('connectStacks')}
+                      </button>
+                    </div>
+                    <p className="max-w-2xl border-l border-[#f4c95d]/40 pl-4 text-xs leading-6 text-[#c9b99f]/80">
+                      {t('stacksNote')}
+                    </p>
+                  </div>
+
+                  <div className="relative mx-auto w-full max-w-md">
+                    <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }} className="rounded-[2rem] border border-[#f4c95d]/25 bg-[#130d09]/75 p-5 shadow-2xl backdrop-blur-xl">
+                      <div className="mb-5 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#f4c95d]">ThesisAI Core</p>
+                          <p className="mt-1 text-xs text-[#c9b99f]">Service ID 8004 • Self Agent ID</p>
+                        </div>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4c95d] text-[#1a120c]"><Cpu className="h-5 w-5" /></div>
+                      </div>
+                      <div className="space-y-3">
+                        {[
+                          ['Groq Router', 'Llama 3.3 70B / Qwen3 / DeepSeek', 92],
+                          ['Citation Graph', 'SRC tags + reference builder', 84],
+                          ['Proof Layer', 'Proof-of-research ready', 76],
+                        ].map(([label, desc, value]) => (
+                          <div key={label as string} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-bold text-white">{label}</p>
+                                <p className="text-[10px] text-[#bca98d]">{desc}</p>
+                              </div>
+                              <span className="text-xs font-mono text-[#f4c95d]">{value}%</span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-[#2c1e14]"><motion.div initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 1.2, delay: 0.2 }} className="h-full rounded-full bg-gradient-to-r from-[#8b5e34] via-[#f4c95d] to-white" /></div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                  [Sparkles, t('aiModels'), t('aiModelsDesc')],
+                  [Upload, t('sourceIngestion'), t('sourceIngestionDesc')],
+                  [GraduationCap, t('thesisWorkflow'), t('thesisWorkflowDesc')],
+                  [Network, t('bitcoinLayer'), t('bitcoinLayerDesc')],
+                ].map(([Icon, title, desc]: any, idx) => (
+                  <motion.div key={title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="group rounded-[1.75rem] border border-[#1f2128] bg-[#111318] p-6 shadow-xl transition hover:-translate-y-1 hover:border-[#f4c95d]/35 hover:bg-[#17120d]">
+                    <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4c95d]/10 text-[#f4c95d] transition group-hover:bg-[#f4c95d] group-hover:text-[#1a120c]"><Icon className="h-5 w-5" /></div>
+                    <h3 className="text-lg font-black tracking-tight text-white">{title}</h3>
+                    <p className="mt-3 text-sm leading-6 text-[#9c8c75]">{desc}</p>
+                  </motion.div>
+                ))}
+              </section>
+
+              <section className="rounded-[2rem] border border-[#f4c95d]/15 bg-[#f6ead8] p-6 text-[#24170f] shadow-2xl lg:p-8">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="max-w-2xl">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#3b2618] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#f4c95d]"><ShieldCheck className="h-3 w-3" /> Submission Ready</div>
+                    <h3 className="text-2xl font-black tracking-tight lg:text-3xl">Premium UX sekarang, on-chain research provenance berikutnya.</h3>
+                    <p className="mt-3 text-sm leading-6 text-[#6f573d]">Ide tambahan: setelah MVP stabil, tambahkan kontrak Clarity untuk mencatat hash dokumen final, badge reviewer, dan insentif sBTC untuk contributor/reviewer sebagai bukti provenance riset.</p>
+                  </div>
+                  <button onClick={() => setView('generator')} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#3b2618] px-6 py-4 text-[11px] font-black uppercase tracking-[0.22em] text-white transition hover:bg-[#5a3924]"><Rocket className="h-4 w-4 text-[#f4c95d]" /> Start now</button>
+                </div>
+              </section>
+            </motion.div>
+          )}
+
           {view === 'dashboard' && user && (
             <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8 max-w-5xl mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#1f2128]">
@@ -953,6 +1114,18 @@ export default function App() {
                       {isFetchingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link className="w-3 h-3" />}
                       {t('addUrl')}
                     </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#b59a6d]/30 bg-[#0c0d10] p-4 text-center transition hover:border-[#f4c95d]/70 hover:bg-[#18120c]">
+                        {isParsingFile ? <Loader2 className="h-5 w-5 animate-spin text-[#f4c95d]" /> : <Upload className="h-5 w-5 text-[#f4c95d]" />}
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d9c39d]">Upload PDF / TXT</span>
+                        <input type="file" accept=".pdf,.txt,.md,text/plain,application/pdf" onChange={handleFileUpload} className="hidden" />
+                      </label>
+                      <div className="rounded-2xl border border-[#1f2128] bg-[#0c0d10] p-3">
+                        <textarea value={textInput} onChange={e => setTextInput(e.target.value)} placeholder={t('pasteText')} className="h-16 w-full resize-none bg-transparent text-xs text-[#f0f1f3] outline-none placeholder:text-[#4a4b4e]" />
+                        <button onClick={addTextSource} disabled={!textInput.trim()} className="mt-2 w-full rounded-xl bg-[#f4c95d]/90 px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-[#1a120c] transition hover:bg-[#ffe18a] disabled:opacity-40">{t('pasteText')}</button>
+                      </div>
+                    </div>
 
                     <AnimatePresence>
                       {sources.length > 0 && (
