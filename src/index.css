@@ -61,7 +61,7 @@ body {
   font-size: 0.9em;
 }
 
-.academic-paper th, 
+.academic-paper th,
 .academic-paper td {
   border: 1px solid #ddd;
   padding: 8px;
@@ -86,15 +86,15 @@ body {
   margin-bottom: 1.25em;
 }
 
-.academic-paper h1, 
-.academic-paper h2, 
-.academic-paper h3 { 
+.academic-paper h1,
+.academic-paper h2,
+.academic-paper h3 {
   text-indent: 0 !important;
   line-height: 1.2;
 }
 
-.academic-paper h1 { 
-  font-size: 1.2rem; 
+.academic-paper h1 {
+  font-size: 1.2rem;
   text-align: center;
   text-transform: uppercase;
   margin-top: 0;
@@ -102,7 +102,7 @@ body {
   font-weight: bold;
 }
 
-.academic-paper h2 { 
+.academic-paper h2 {
   font-size: 1.1rem;
   text-align: left;
   margin-top: 1.5rem;
@@ -134,7 +134,7 @@ body {
   .academic-paper h2 { font-size: 12pt; }
 }
 
-.academic-paper ul, 
+.academic-paper ul,
 .academic-paper ol {
   margin-left: 3rem;
   margin-bottom: 1.5em;
@@ -216,4 +216,64 @@ body {
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-family: var(--font-mono);
+}
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(139, 94, 52, 0.22), transparent 34rem),
+    radial-gradient(circle at bottom right, rgba(244, 201, 93, 0.12), transparent 30rem),
+    #0c0d10;
+}
+
+::selection {
+  background: rgba(244, 201, 93, 0.35);
+  color: #fff8ec;
+}
+
+.luxury-hero {
+  isolation: isolate;
+}
+
+.luxury-hero::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(120deg, rgba(244, 201, 93, 0.35), rgba(255, 255, 255, 0.06), rgba(139, 94, 52, 0.28));
+  filter: blur(22px);
+  opacity: 0.55;
+}
+
+.thesis-grid {
+  background-image:
+    linear-gradient(rgba(244, 201, 93, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 201, 93, 0.09) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 20%, black, transparent 72%);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0c0d10;
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(#8b5e34, #f4c95d);
+  border-radius: 999px;
+}
+
+.academic-cover-page p {
+  text-indent: 0 !important;
+  text-align: center !important;
+}
+
+.academic-cover-page img {
+  page-break-inside: avoid;
 }
