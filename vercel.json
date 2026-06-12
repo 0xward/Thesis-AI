@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "build": {
+    "env": {
+      "VERCEL_TOOLBAR_ENABLED": "0"
+    }
+  },
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["api/**"],
+        "tsconfig": "api/tsconfig.json"
+      }
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}

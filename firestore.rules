@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Thesis validation
+    function isValidThesis(data) {
+      return data.keys().hasAll(['userId', 'title', 'structure', 'createdAt', 'updatedAt']) 
+        && data.userId is string 
+        && data.title is string && data.title.size() <= 500
+        && data.structure is map
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    match /visitors/{document} {
+      allow read, write: if true;
+    }
+
+    match /online_sessions/{document} {
+      allow read, write: if true;
+    }
+
+    match /theses/{thesisId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidThesis(request.resource.data) 
+        && request.resource.data.userId == request.auth.uid;
+        
+      allow update: if isSignedIn() 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+        
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
