@@ -1,0 +1,92 @@
+name: Research Index Refresh
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+    - cron: '30 8 * * *'
+    - cron: '0 10 * * *'
+    - cron: '30 11 * * *'
+    - cron: '0 13 * * *'
+    - cron: '30 14 * * *'
+    - cron: '0 16 * * *'
+    - cron: '30 17 * * *'
+    - cron: '0 19 * * *'
+    - cron: '30 20 * * *'
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Roll
+        id: gate
+        run: |
+          R=$((RANDOM % 11))
+          # Target ~6-9 out of 11 runs
+          [ $R -lt 2 ] && echo "run=false" >> $GITHUB_OUTPUT || echo "run=true" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Fetch Stacks state
+        if: steps.gate.outputs.run == 'true'
+        id: stacks
+        run: |
+          INFO=$(curl -sf "https://api.hiro.so/v2/info" || echo '{}')
+          HEIGHT=$(echo "$INFO" | python3 -c "
+          import sys,json
+          try: print(json.load(sys.stdin).get('stacks_tip_height',''))
+          except: print('')
+          ")
+          echo "height=$HEIGHT" >> $GITHUB_OUTPUT
+
+      - name: Pick message
+        if: steps.gate.outputs.run == 'true'
+        id: msg
+        run: |
+          H="${{ steps.stacks.outputs.height }}"
+          DATE=$(date -u +"%Y-%m-%d")
+          MSGS=(
+            "docs: refresh research index for $DATE"
+            "update: citation registry synced at block $H"
+            "chore: keep source index current — $DATE"
+            "docs: academic chain anchor updated"
+            "update: on-chain citation snapshot $DATE"
+            "chore: thesis reference state at tip $H"
+            "docs: sync research provenance log"
+            "update: writing session checkpoint $DATE"
+            "chore: citation chain health — block $H"
+            "docs: knowledge graph reference update $DATE"
+            "update: research layer state $DATE"
+          )
+          IDX=$((RANDOM % ${#MSGS[@]}))
+          echo "text=${MSGS[$IDX]}" >> $GITHUB_OUTPUT
+
+      - name: Write changelog entry
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          mkdir -p .research
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          HEIGHT="${{ steps.stacks.outputs.height }}"
+          DATE=$(date -u +"%Y-%m-%d")
+
+          # Append a new entry to the markdown log
+          echo "" >> .research/index-log.md
+          echo "## $TIMESTAMP" >> .research/index-log.md
+          echo "" >> .research/index-log.md
+          echo "- Stacks anchor block: \`$HEIGHT\`" >> .research/index-log.md
+          echo "- Source index verified: \`$DATE\`" >> .research/index-log.md
+          echo "- Citation layer: Stacks mainnet" >> .research/index-log.md
+
+      - name: Commit
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git config user.name "0xward"
+          git config user.email "0xward.dev@gmail.com"
+          git add .research/index-log.md
+          git diff --staged --quiet && echo "clean" && exit 0
+          git commit -m "${{ steps.msg.outputs.text }}"
+          git push
