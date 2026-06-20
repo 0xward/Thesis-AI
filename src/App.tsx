@@ -48,7 +48,6 @@ export default function App() {
   const [isAnchoring, setIsAnchoring] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   useEffect(() => {
@@ -1088,7 +1087,7 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={() => setShowWalletModal(true)}
+                onClick={() => stacksWallet.connectWallet().catch(() => undefined)}
                 disabled={stacksWallet.isConnecting}
                 className="flex items-center gap-2 px-3 lg:px-4 py-2 rounded-xl border border-[#f4c95d]/25 bg-[#111318] hover:bg-[#f4c95d]/10 transition text-[10px] font-black uppercase tracking-wider text-[#f4c95d] disabled:opacity-60"
                 title="Connect Stacks wallet (Leather / Xverse)"
@@ -1116,7 +1115,7 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={() => setShowWalletModal(true)}
+                onClick={() => stacksWallet.connectWallet().catch(() => undefined)}
                 disabled={stacksWallet.isConnecting}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#f4c95d]/30 bg-[#f4c95d]/10 text-[10px] font-black uppercase tracking-wider text-[#f4c95d] disabled:opacity-60"
               >
@@ -2159,106 +2158,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Wallet Connect Modal */}
-      <AnimatePresence>
-        {showWalletModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-[#0c0d10]/90 backdrop-blur-md" onClick={() => setShowWalletModal(false)}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-[#111318] w-full max-w-md p-6 sm:p-8 rounded-[2rem] border border-[#f4c95d]/20 shadow-2xl relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-56 h-56 bg-[#f4c95d]/5 blur-[80px] rounded-full pointer-events-none" />
-              <div className="relative space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-black text-[#f0f1f3] tracking-tight">Connect Stacks Wallet</h2>
-                    <p className="text-[10px] text-[#4a4b4e] uppercase tracking-widest font-bold mt-1">Leather · Xverse · Stacks Mainnet</p>
-                  </div>
-                  <button onClick={() => setShowWalletModal(false)} className="p-2 rounded-xl border border-[#1f2128] text-[#4a4b4e] hover:text-[#f0f1f3] transition">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Wallet options */}
-                <div className="space-y-3">
-                  {/* Leather — opens the official @stacks/connect wallet selector */}
-                  <button
-                    onClick={() => {
-                      setShowWalletModal(false);
-                      stacksWallet.connectWallet().catch(() => undefined);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#f4c95d]/20 bg-[#f4c95d]/5 hover:bg-[#f4c95d]/10 hover:border-[#f4c95d]/40 transition group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[#f4c95d]/15 border border-[#f4c95d]/30 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-5 h-5 text-[#f4c95d]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black text-[#f0f1f3]">Leather Wallet</p>
-                      <p className="text-[10px] text-[#4a4b4e] font-mono">Browser extension · leather.io</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#f4c95d] transition ml-auto" />
-                  </button>
-
-                  {/* Xverse — opens the official @stacks/connect wallet selector */}
-                  <button
-                    onClick={() => {
-                      setShowWalletModal(false);
-                      stacksWallet.connectWallet().catch(() => undefined);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#b59a6d]/20 bg-[#b59a6d]/5 hover:bg-[#b59a6d]/10 hover:border-[#b59a6d]/40 transition group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[#b59a6d]/15 border border-[#b59a6d]/30 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-5 h-5 text-[#b59a6d]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black text-[#f0f1f3]">Xverse Wallet</p>
-                      <p className="text-[10px] text-[#4a4b4e] font-mono">Browser extension · xverse.app</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#b59a6d] transition ml-auto" />
-                  </button>
-
-                  {/* Auto-detect / any SIP-030 wallet */}
-                  <button
-                    onClick={() => {
-                      setShowWalletModal(false);
-                      stacksWallet.connectWallet().catch(() => undefined);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#1f2128] bg-[#0c0d10] hover:bg-[#111318] hover:border-[#2b2d35] transition group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[#1f2128] border border-[#2b2d35] flex items-center justify-center flex-shrink-0">
-                      <Zap className="w-5 h-5 text-[#4a4b4e]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black text-[#9ca3af]">Auto-detect</p>
-                      <p className="text-[10px] text-[#4a4b4e] font-mono">Connect any installed wallet</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#9ca3af] transition ml-auto" />
-                  </button>
-                </div>
-
-                {/* Mobile note */}
-                <div className="p-4 rounded-2xl border border-[#1f2128] bg-[#0c0d10]">
-                  <p className="text-[10px] text-[#4a4b4e] leading-5">
-                    <span className="font-black text-[#b59a6d]">Di HP?</span> Buka situs ini di dalam browser in-app <span className="text-[#f4c95d]">Leather</span> atau <span className="text-[#b59a6d]">Xverse</span> untuk connect wallet.
-                  </p>
-                  <div className="flex gap-2 mt-3">
-                    <a href="https://leather.io/install-mobile" target="_blank" rel="noopener noreferrer" className="flex-1 text-center py-2 rounded-xl border border-[#f4c95d]/20 bg-[#f4c95d]/5 text-[10px] font-black uppercase tracking-wider text-[#f4c95d] hover:bg-[#f4c95d]/10 transition">
-                      Get Leather
-                    </a>
-                    <a href="https://www.xverse.app/download" target="_blank" rel="noopener noreferrer" className="flex-1 text-center py-2 rounded-xl border border-[#b59a6d]/20 bg-[#b59a6d]/5 text-[10px] font-black uppercase tracking-wider text-[#b59a6d] hover:bg-[#b59a6d]/10 transition">
-                      Get Xverse
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Wallet Connect Modal removed: connectWallet() now opens the official
+          @stacks/connect wallet selector directly on click, with no
+          intermediate custom modal in between. */}
 
       {/* Footer — includes $THESIS token stats + Suggest Feature */}
       <footer className="w-full border-t border-[#1f2128] bg-[#0c0d10] mt-8">
