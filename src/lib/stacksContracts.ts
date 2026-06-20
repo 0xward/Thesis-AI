@@ -1,10 +1,23 @@
 // src/lib/stacksContracts.ts
 // Stacks contract addresses, API helpers, and crypto utilities for ThesisAI.
 
+import { fetchCallReadOnlyFunction, Cl, ClarityType } from '@stacks/transactions';
+
 export const CONTRACTS = {
   THESIS_TOKEN: 'SPQ189E66S20X7ATY7794HBY6743JE9YJMCKHAEF.thesisai',
   THESIS_REGISTRY: (import.meta as any).env.VITE_STACKS_THESIS_REGISTRY ?? 'SPQ189E66S20X7ATY7794HBY6743JE9YJMCKHAEF.thesis-registry',
+  // v1 - live on mainnet, kept for historical certificates only. Do not mint new
+  // certificates through this contract; it has a known access-control bug
+  // (see contracts-workspace/tests/thesis-certificate-v1-vulnerability.test.ts).
   THESIS_NFT: (import.meta as any).env.VITE_STACKS_THESIS_NFT ?? 'SPQ189E66S20X7ATY7794HBY6743JE9YJMCKHAEF.thesis-certificate',
+  // v2 - fixed contract. All new certificate mints go through here. Minting is
+  // owner-gated and performed by the backend (see api/index.ts /api/certificates/mint),
+  // never directly from the user's wallet.
+  THESIS_NFT_V2: (import.meta as any).env.VITE_STACKS_THESIS_NFT_V2 ?? '',
+  // New peer-review attestation contract. Anyone with a wallet can call this
+  // directly (no backend gating needed - the contract itself prevents
+  // self-review and duplicate reviews).
+  THESIS_REVIEW: (import.meta as any).env.VITE_STACKS_THESIS_REVIEW ?? '',
 } as const;
 
 export const HIRO_API = 'https://api.hiro.so';
@@ -41,7 +54,7 @@ export async function fetchThesisBalance(address: string): Promise<number> {
  * Uses multiple Hiro API endpoints for resilience.
  */
 export async function fetchThesisHolderCount(): Promise<number> {
-  // Strategy 1: FT holders endpoint — returns total holder count
+  // Strategy 1: FT holders endpoint - returns total holder count
   try {
     const url = `${HIRO_API}/extended/v1/tokens/ft/${CONTRACT_PRINCIPAL}/holders?limit=1&offset=0`;
     const res = await fetch(url, {
@@ -57,7 +70,7 @@ export async function fetchThesisHolderCount(): Promise<number> {
     }
   } catch { /* fall through */ }
 
-  // Strategy 2: token metadata endpoint — has holder_count field
+  // Strategy 2: token metadata endpoint - has holder_count field
   try {
     const url = `${HIRO_API}/extended/v1/tokens/ft/${CONTRACT_PRINCIPAL}`;
     const res = await fetch(url, {
@@ -121,4 +134,119 @@ export function hexToBytes(hex: string): Uint8Array {
     bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
   }
   return bytes;
+}
+
+export type ThesisProof = {
+  owner: string;
+  block: number;
+  title: string;
+};
+
+export type ReviewStats = {
+  totalRating: number;
+  reviewCount: number;
+  averageRating: number; // already divided by 100, e.g. 4.5
+};
+
+const parseContractId = (contractId: string): [string, string] => {
+  const [address, name] = contractId.split('.');
+  if (!address || !name) throw new Error(`Invalid contract id: ${contractId}`);
+  return [address, name];
+};
+
+/**
+ * Looks up a thesis hash in thesis-registry and returns its anchor proof,
+ * or null if the hash was never anchored. Used by the public "Verify
+ * Thesis" page so anyone (no wallet required) can confirm a thesis's
+ * on-chain provenance.
+ */
+export async function verifyThesis(hashHex: string, network: 'mainnet' | 'testnet' = 'mainnet'): Promise<ThesisProof | null> {
+  if (!CONTRACTS.THESIS_REGISTRY) throw new Error('Registry contract not configured.');
+  const [contractAddress, contractName] = parseContractId(CONTRACTS.THESIS_REGISTRY);
+
+  const result = await fetchCallReadOnlyFunction({
+    contractAddress,
+    contractName,
+    functionName: 'get-proof',
+    functionArgs: [Cl.buffer(hexToBytes(hashHex))],
+    network,
+    senderAddress: contractAddress,
+  });
+
+  // get-proof returns (optional (tuple (owner principal) (block uint) (title (string-utf8 200))))
+  if (result.type !== ClarityType.OptionalSome) return null;
+
+  const tuple = result.value;
+  if (tuple.type !== ClarityType.Tuple) return null;
+
+  const ownerCV = tuple.value['owner'];
+  const blockCV = tuple.value['block'];
+  const titleCV = tuple.value['title'];
+
+  const owner = ownerCV?.type === ClarityType.PrincipalStandard || ownerCV?.type === ClarityType.PrincipalContract
+    ? (ownerCV as any).value
+    : '';
+  const block = blockCV?.type === ClarityType.UInt ? Number((blockCV as any).value) : 0;
+  const title = titleCV?.type === ClarityType.StringUTF8 ? (titleCV as any).value : '';
+
+  return { owner, block, title };
+}
+
+/**
+ * Checks whether a certificate has already been minted for this hash on
+ * thesis-certificate-v2 (returns the token id if so, or null).
+ */
+export async function getCertificateForHash(hashHex: string, network: 'mainnet' | 'testnet' = 'mainnet'): Promise<number | null> {
+  if (!CONTRACTS.THESIS_NFT_V2) return null;
+  const [contractAddress, contractName] = parseContractId(CONTRACTS.THESIS_NFT_V2);
+
+  const result = await fetchCallReadOnlyFunction({
+    contractAddress,
+    contractName,
+    functionName: 'get-certificate-for-hash',
+    functionArgs: [Cl.buffer(hexToBytes(hashHex))],
+    network,
+    senderAddress: contractAddress,
+  });
+
+  if (result.type !== ClarityType.OptionalSome) return null;
+  const tokenIdCV = result.value;
+  return tokenIdCV.type === ClarityType.UInt ? Number((tokenIdCV as any).value) : null;
+}
+
+/**
+ * Fetches aggregate peer-review stats for a thesis hash from thesis-review.
+ * Returns zeroed stats (not null) if the contract isn't configured yet or
+ * the hash has no reviews -- this matches the contract's own behavior of
+ * returning a zeroed tuple rather than none.
+ */
+export async function getReviewStats(hashHex: string, network: 'mainnet' | 'testnet' = 'mainnet'): Promise<ReviewStats> {
+  const zero: ReviewStats = { totalRating: 0, reviewCount: 0, averageRating: 0 };
+  if (!CONTRACTS.THESIS_REVIEW) return zero;
+  const [contractAddress, contractName] = parseContractId(CONTRACTS.THESIS_REVIEW);
+
+  try {
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress,
+      contractName,
+      functionName: 'get-review-stats',
+      functionArgs: [Cl.buffer(hexToBytes(hashHex))],
+      network,
+      senderAddress: contractAddress,
+    });
+
+    if (result.type !== ClarityType.Tuple) return zero;
+    const totalRatingCV = result.value['total-rating'];
+    const reviewCountCV = result.value['review-count'];
+    const totalRating = totalRatingCV?.type === ClarityType.UInt ? Number((totalRatingCV as any).value) : 0;
+    const reviewCount = reviewCountCV?.type === ClarityType.UInt ? Number((reviewCountCV as any).value) : 0;
+
+    return {
+      totalRating,
+      reviewCount,
+      averageRating: reviewCount > 0 ? Math.round((totalRating / reviewCount) * 100) / 100 : 0,
+    };
+  } catch {
+    return zero;
+  }
 }

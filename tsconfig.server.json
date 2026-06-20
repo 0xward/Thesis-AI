@@ -8,5 +8,7 @@
       "skipLibCheck": true,
       "allowJs": true,
       "noEmit": false
-    }
+    },
+    "include": ["server.ts", "api/**/*.ts"],
+    "exclude": ["node_modules", "contracts-workspace", "dist"]
   }

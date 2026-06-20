@@ -1,3 +1,11 @@
+> **Deprecated.** This log was produced by a scheduled workflow
+> (`.github/workflows/research-index.yml`) that committed templated, randomized
+> messages on a schedule purely to keep the repository's contribution graph
+> looking active. It had no functional purpose. It has been replaced by
+> `.research/contract-status.md`, produced by `.github/workflows/contract-health-check.yml`,
+> which only commits when a real, observable status change occurs. This file
+> is kept for historical transparency rather than deleted.
+
 
 ## 2026-06-12T06:18:35Z
 
@@ -405,76 +413,4 @@
 
 - Stacks anchor block: `8335924`
 - Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T13:35:44Z
-
-- Stacks anchor block: `8336383`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T14:25:44Z
-
-- Stacks anchor block: `8336713`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T15:54:49Z
-
-- Stacks anchor block: `8337302`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T16:44:27Z
-
-- Stacks anchor block: `8337680`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T17:52:17Z
-
-- Stacks anchor block: `8338173`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T19:13:16Z
-
-- Stacks anchor block: `8338781`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T21:43:11Z
-
-- Stacks anchor block: `8339994`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-19T22:43:32Z
-
-- Stacks anchor block: `8340446`
-- Source index verified: `2026-06-19`
-- Citation layer: Stacks mainnet
-
-## 2026-06-20T09:56:09Z
-
-- Stacks anchor block: `8345312`
-- Source index verified: `2026-06-20`
-- Citation layer: Stacks mainnet
-
-## 2026-06-20T10:45:01Z
-
-- Stacks anchor block: `8345686`
-- Source index verified: `2026-06-20`
-- Citation layer: Stacks mainnet
-
-## 2026-06-20T11:56:53Z
-
-- Stacks anchor block: `8346235`
-- Source index verified: `2026-06-20`
-- Citation layer: Stacks mainnet
-
-## 2026-06-20T13:06:32Z
-
-- Stacks anchor block: `8346733`
-- Source index verified: `2026-06-20`
 - Citation layer: Stacks mainnet

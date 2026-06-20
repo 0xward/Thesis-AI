@@ -5,6 +5,8 @@ import { cn } from './lib/utils';
 import axios from 'axios';
 import Markdown from 'react-markdown';
 import ChatAssistant from './components/ChatAssistant';
+import { ReviewAction } from './components/ReviewAction';
+import { VerifyThesisModal } from './components/VerifyThesisModal';
 import { useStacksWallet } from './Web3Provider';
 import { fetchThesisHolderCount, HIRO_API, CONTRACTS } from './lib/stacksContracts';
 
@@ -47,6 +49,7 @@ export default function App() {
   const [isMinting, setIsMinting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   useEffect(() => {
     // Visitor tracking
@@ -1065,6 +1068,14 @@ export default function App() {
                 </button>
               </nav>
             )}
+            <button
+              onClick={() => setShowVerifyModal(true)}
+              className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl border border-emerald-500/25 bg-[#111318] hover:bg-emerald-500/10 transition text-[10px] font-black uppercase tracking-wider text-emerald-400"
+              title="Verify a thesis's on-chain provenance - no wallet needed"
+            >
+              <ShieldCheck className="w-3 h-3" />
+              <span>Verify Thesis</span>
+            </button>
             {stacksWallet.isConnected && stacksWallet.address ? (
               <button
                 onClick={() => stacksWallet.disconnectWallet().catch(() => undefined)}
@@ -2051,6 +2062,14 @@ export default function App() {
                          <span className="text-[9px] text-[#4a4b4e] mt-0.5">Anchor first to unlock</span>
                        )}
                      </div>
+
+                     {/* Peer Review button */}
+                     <div className="flex flex-col gap-1">
+                       <ReviewAction
+                         thesisMarkdown={getThesisMarkdown()}
+                         isAnchored={anchorTxid !== null}
+                       />
+                     </div>
                    </div>
                  )}
                </div>
@@ -2133,6 +2152,13 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Verify Thesis Modal */}
+      <AnimatePresence>
+        {showVerifyModal && (
+          <VerifyThesisModal onClose={() => setShowVerifyModal(false)} />
+        )}
+      </AnimatePresence>
+
       {/* Wallet Connect Modal */}
       <AnimatePresence>
         {showWalletModal && (
@@ -2159,11 +2185,11 @@ export default function App() {
 
                 {/* Wallet options */}
                 <div className="space-y-3">
-                  {/* Leather */}
+                  {/* Leather — opens the official @stacks/connect wallet selector */}
                   <button
                     onClick={() => {
                       setShowWalletModal(false);
-                      stacksWallet.connectWallet('leather').catch(() => undefined);
+                      stacksWallet.connectWallet().catch(() => undefined);
                     }}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#f4c95d]/20 bg-[#f4c95d]/5 hover:bg-[#f4c95d]/10 hover:border-[#f4c95d]/40 transition group"
                   >
@@ -2177,11 +2203,11 @@ export default function App() {
                     <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#f4c95d] transition ml-auto" />
                   </button>
 
-                  {/* Xverse */}
+                  {/* Xverse — opens the official @stacks/connect wallet selector */}
                   <button
                     onClick={() => {
                       setShowWalletModal(false);
-                      stacksWallet.connectWallet('xverse').catch(() => undefined);
+                      stacksWallet.connectWallet().catch(() => undefined);
                     }}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#b59a6d]/20 bg-[#b59a6d]/5 hover:bg-[#b59a6d]/10 hover:border-[#b59a6d]/40 transition group"
                   >
@@ -2195,7 +2221,7 @@ export default function App() {
                     <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#b59a6d] transition ml-auto" />
                   </button>
 
-                  {/* Auto-detect */}
+                  {/* Auto-detect / any SIP-030 wallet */}
                   <button
                     onClick={() => {
                       setShowWalletModal(false);

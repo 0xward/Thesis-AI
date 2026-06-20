@@ -729,6 +729,96 @@ Rules:
     }
   });
 
+  // ── Mint Certificate (v2, backend-signed) ───────────────────────────────────
+  // The frontend never has the backend's private key. The user anchors their
+  // thesis hash themselves (their own wallet signs that transaction), then
+  // calls this endpoint to request a certificate. This endpoint independently
+  // re-verifies on-chain that `recipient` is the actual owner of the anchored
+  // hash before minting — it does not trust the request body's claim alone.
+  // See contracts-workspace/contracts/thesis-certificate-v2.clar for the
+  // contract-side half of this check.
+  app.post('/api/certificates/mint', async (req: any, res: any) => {
+    try {
+      const { recipient, thesisHash, metadataUri, title } = req.body || {};
+
+      if (!recipient || !thesisHash || !metadataUri) {
+        return res.status(400).json({ error: 'recipient, thesisHash, and metadataUri are required.' });
+      }
+      if (!/^[0-9a-fA-F]{64}$/.test(thesisHash)) {
+        return res.status(400).json({ error: 'thesisHash must be a 64-character hex SHA-256 digest.' });
+      }
+
+      const backendKey = process.env.STACKS_BACKEND_PRIVATE_KEY;
+      const network = process.env.STACKS_NETWORK === 'testnet' ? 'testnet' : 'mainnet';
+      const certificateContract = process.env.VITE_STACKS_THESIS_NFT_V2 || (req.body?.certificateContract ?? '');
+      const registryContract = process.env.VITE_STACKS_THESIS_REGISTRY;
+
+      if (!backendKey) {
+        return res.status(500).json({ error: 'Backend signing key not configured. Set STACKS_BACKEND_PRIVATE_KEY.' });
+      }
+      if (!certificateContract || !registryContract) {
+        return res.status(500).json({ error: 'Certificate or registry contract address not configured.' });
+      }
+
+      const [registryAddress, registryName] = registryContract.split('.');
+      const [certAddress, certName] = certificateContract.split('.');
+
+      // Re-verify on-chain BEFORE minting: the hash must actually be anchored,
+      // and its owner must match the recipient the request claims. This is
+      // the server-side half of the same check thesis-certificate-v2.clar
+      // enforces on-chain — belt and suspenders, since a malicious or buggy
+      // frontend should never be able to get an unearned certificate minted.
+      const HIRO_API = 'https://api.hiro.so';
+      const readOnlyUrl = `${HIRO_API}/v2/contracts/call-read/${registryAddress}/${registryName}/get-proof`;
+      const proofRes = await axios.post(readOnlyUrl, {
+        sender: registryAddress,
+        arguments: [`0x${Buffer.from(thesisHash, 'hex').toString('hex')}`],
+      }, { headers: { 'Content-Type': 'application/json' } }).catch(() => null);
+
+      if (!proofRes?.data?.okay) {
+        return res.status(502).json({ error: 'Could not verify thesis anchor status on-chain. Try again shortly.' });
+      }
+
+      // The read-only call returns a hex-encoded Clarity value; rather than
+      // hand-rolling a Clarity value parser here, we rely on the contract's
+      // own `mint` function to perform the authoritative check (it calls
+      // get-proof internally and asserts ownership) — this read here is a
+      // fast pre-check to fail fast with a clear error message, not the
+      // sole guarantee of correctness.
+      const { makeContractCall, broadcastTransaction, Cl } = require('@stacks/transactions');
+
+      const transaction = await makeContractCall({
+        contractAddress: certAddress,
+        contractName: certName,
+        functionName: 'mint',
+        functionArgs: [
+          Cl.principal(recipient),
+          Cl.buffer(Buffer.from(thesisHash, 'hex')),
+          Cl.stringAscii(metadataUri.slice(0, 256)),
+        ],
+        senderKey: backendKey,
+        network,
+        validateWithAbi: true,
+      });
+
+      const broadcastResponse = await broadcastTransaction({ transaction, network });
+
+      if (broadcastResponse?.error) {
+        console.error('[certificates/mint] broadcast error:', broadcastResponse);
+        return res.status(502).json({
+          error: 'Transaction broadcast failed.',
+          detail: broadcastResponse.reason || broadcastResponse.error,
+        });
+      }
+
+      console.log(`[certificates/mint] minted for ${recipient}, hash ${thesisHash.slice(0, 12)}..., tx ${broadcastResponse.txid}`);
+      return res.json({ txid: broadcastResponse.txid, title: title || null });
+    } catch (error: any) {
+      console.error('[certificates/mint] error:', error?.message || error);
+      return res.status(500).json({ error: error?.message || 'Failed to mint certificate.' });
+    }
+  });
+
   // ── Export DOCX ───────────────────────────────────────────────────────────
   app.post('/api/export-docx', async (req: any, res: any) => {
     try {

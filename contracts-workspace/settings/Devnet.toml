@@ -1,0 +1,33 @@
+[network]
+name = "devnet"
+deployment_fee_rate = 10
+
+# NOTE: every mnemonic below was freshly generated for LOCAL SIMNET TESTING
+# ONLY. They hold simulated balances inside Clarinet's test environment and
+# have no connection to any real wallet, exchange, or mainnet funds. Never
+# reuse these phrases for a real wallet — treat them as throwaway test data,
+# the same way you'd treat a "password123" placeholder in a tutorial.
+
+[accounts.deployer]
+mnemonic = "bullet onion wheel february crime ask squeeze patch common hazard soup knee loud excite gauge alien crane assume february oppose beach mention six avocado"
+balance = 100_000_000_000_000
+
+[accounts.wallet_1]
+mnemonic = "ugly defense antique charge armed spare grid nut brief hamster anger cluster fresh want release recycle pool egg age wasp glare course lawsuit one"
+balance = 100_000_000_000_000
+
+[accounts.wallet_2]
+mnemonic = "jungle better shy doctor tragic example alien topic school reveal inner ridge injury average exhaust depth effort steel service quick name deer modify clutch"
+balance = 100_000_000_000_000
+
+[accounts.wallet_3]
+mnemonic = "occur morning north can abstract burden install clay repair left bomb idle drive convince access page alien purse manual amused blossom strike shallow potato"
+balance = 100_000_000_000_000
+
+[accounts.wallet_4]
+mnemonic = "post change despair blame two rose satisfy poet twenty ten arrow tourist laundry virtual syrup phrase tape tobacco merry wreck slogan claim arrest run"
+balance = 100_000_000_000_000
+
+[accounts.wallet_5]
+mnemonic = "junk keen corn leave ripple vacant sound save project potato pair tree time march donate knife manual modify there luxury subway prevent payment annual"
+balance = 100_000_000_000_000

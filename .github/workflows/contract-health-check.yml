@@ -1,0 +1,67 @@
+name: Contract Health Check
+
+# Replaces the old "Research Index Refresh" workflow, which committed
+# randomly-templated messages on a schedule purely to keep the contribution
+# graph looking active - it had no functional purpose and risked looking
+# like fabricated activity to anyone reviewing the repo's history.
+#
+# This workflow does something real instead: it checks that each live
+# contract's metadata endpoint responds with HTTP 200 (meaning the contract
+# is actually deployed and indexed). It only writes a log entry (and only
+# commits) when the recorded status actually changes or an anomaly is
+# detected - not on every run.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # once a day is enough for a liveness check
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check thesis-registry is deployed and reachable
+        id: registry
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.hiro.so/extended/v1/contract/SPQ189E66S20X7ATY7794HBY6743JE9YJMCKHAEF.thesis-registry")
+          [ "$STATUS" = "200" ] && echo "okay=true" >> "$GITHUB_OUTPUT" || echo "okay=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check thesis-certificate (v1) is deployed and reachable
+        id: cert_v1
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.hiro.so/extended/v1/contract/SPQ189E66S20X7ATY7794HBY6743JE9YJMCKHAEF.thesis-certificate")
+          [ "$STATUS" = "200" ] && echo "okay=true" >> "$GITHUB_OUTPUT" || echo "okay=false" >> "$GITHUB_OUTPUT"
+
+      - name: Record status (only commit on change)
+        run: |
+          mkdir -p .research
+          STATUS_FILE=".research/contract-status.md"
+          TODAY=$(date -u +"%Y-%m-%d")
+          NEW_LINE="$TODAY | registry=${{ steps.registry.outputs.okay }} | certificate-v1=${{ steps.cert_v1.outputs.okay }}"
+
+          touch "$STATUS_FILE"
+          LAST_LINE=$(grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} \|' "$STATUS_FILE" | tail -n 1 || true)
+          LAST_STATUS=$(echo "$LAST_LINE" | sed -E 's/^[0-9-]+ \| //')
+          NEW_STATUS=$(echo "$NEW_LINE" | sed -E 's/^[0-9-]+ \| //')
+
+          if [ "$LAST_STATUS" != "$NEW_STATUS" ]; then
+            echo "$NEW_LINE" >> "$STATUS_FILE"
+            git config user.name "thesisai-bot"
+            git config user.email "actions@github.com"
+            git add "$STATUS_FILE"
+            git commit -m "contract status changed: $NEW_STATUS"
+            git push
+          else
+            echo "No status change since last check ($LAST_STATUS) - skipping commit."
+          fi
+
+      - name: Fail the job if any contract is unreachable
+        if: steps.registry.outputs.okay != 'true' || steps.cert_v1.outputs.okay != 'true'
+        run: |
+          echo "::error::One or more ThesisAI contracts did not respond as expected. Check https://explorer.hiro.so for network status."
+          exit 1

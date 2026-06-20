@@ -1,0 +1,48 @@
+[project]
+name = "thesis-ai"
+description = "ThesisAI - Stacks smart contracts: thesis provenance registry, NFT certificates, and reviewer attestations."
+authors = ["0xward.dev@gmail.com"]
+telemetry = false
+cache_dir = "./.cache"
+requirements = [
+  { contract_id = "SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait" }
+]
+
+# NOTE: a local mirror of this exact trait also lives at
+# contracts/nft-trait.clar, for environments without internet access (e.g.
+# CI sandboxes) where Clarinet can't fetch the mainnet contract. It is not
+# registered as a [contracts.*] entry here because the `requirements` entry
+# above is what real deployments must use. If you ever need the offline
+# fallback, swap the impl-trait lines in thesis-certificate*.clar to
+# `.nft-trait.nft-trait` and register nft-trait.clar as a contract instead.
+
+[contracts.thesis-registry]
+path = "contracts/thesis-registry.clar"
+clarity_version = 3
+epoch = 3.1
+
+[contracts.thesis-certificate]
+path = "contracts/thesis-certificate.clar"
+clarity_version = 3
+epoch = 3.1
+
+[contracts.thesis-certificate-v2]
+path = "contracts/thesis-certificate-v2.clar"
+clarity_version = 3
+epoch = 3.1
+depends_on = ["thesis-registry"]
+
+[contracts.thesis-review]
+path = "contracts/thesis-review.clar"
+clarity_version = 3
+epoch = 3.1
+depends_on = ["thesis-registry"]
+
+[repl.analysis]
+passes = ["check_checker"]
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
