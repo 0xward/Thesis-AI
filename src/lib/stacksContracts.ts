@@ -127,21 +127,40 @@ export async function sha256Hex(text: string): Promise<string> {
 
 /**
  * Returns the total number of theses ever anchored on thesis-registry, by
- * counting "thesis-anchored" print events emitted by the contract. Uses
- * limit=0 so the Hiro API returns only the `total` count field without
- * transferring any actual event payloads -- cheap and fast.
+ * counting "thesis-anchored" print events emitted by the contract.
+ *
+ * The Hiro events endpoint does NOT return a `total` field (confirmed by
+ * direct inspection) -- it only returns { limit, offset, results }. So we
+ * paginate through pages of events until a page comes back empty, and sum
+ * up how many pages' worth of results we saw. This costs a few requests
+ * for a contract with a few hundred events, which is acceptable for a
+ * once-per-page-load homepage stat.
  */
 export async function getTotalAnchoredTheses(network: 'mainnet' | 'testnet' = 'mainnet'): Promise<number | null> {
   if (!CONTRACTS.THESIS_REGISTRY) return null;
   const host = network === 'mainnet' ? 'api.hiro.so' : 'api.testnet.hiro.so';
+  const PAGE_SIZE = 50;
+  const MAX_PAGES = 50; // safety cap: 50 * 50 = 2500 events max before we stop counting
+
+  let total = 0;
+  let offset = 0;
 
   try {
-    const res = await fetch(`https://${host}/extended/v1/contract/${CONTRACTS.THESIS_REGISTRY}/events?limit=0&offset=0`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return typeof data?.total === 'number' ? data.total : null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await fetch(
+        `https://${host}/extended/v1/contract/${CONTRACTS.THESIS_REGISTRY}/events?limit=${PAGE_SIZE}&offset=${offset}`
+      );
+      if (!res.ok) return total > 0 ? total : null;
+      const data = await res.json();
+      const results: any[] = Array.isArray(data?.results) ? data.results : [];
+
+      total += results.length;
+      if (results.length < PAGE_SIZE) break; // last page reached
+      offset += PAGE_SIZE;
+    }
+    return total;
   } catch {
-    return null;
+    return total > 0 ? total : null;
   }
 }
 /**

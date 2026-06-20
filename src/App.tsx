@@ -250,16 +250,11 @@ export default function App() {
       walletGuideLoginDesc: "Sign in with Google to save your thesis drafts, view generation history, and manage your research library across all devices.",
       walletGuideLoginBtn: "Sign in with Google",
       walletGuideOrHold: "Or hold 1,000 $THESIS tokens",
-      stakeTitle: "Stake to Unlock Full Access",
-      stakeDesc: "Unlock all ThesisAI features by staking USDx/USDCx/STX or by holding 1,000 $THESIS tokens.",
+      stakeTitle: "Unlock Full Access",
+      stakeDesc: "Unlock all ThesisAI features by holding 1,000 $THESIS tokens in your connected wallet.",
       stakeOption1: "Hold 1,000 $THESIS",
       stakeOption1Desc: "Hold at least 1,000 $THESIS tokens in your connected Stacks wallet to unlock all features permanently.",
-      stakeOption2: "Stake USDx / USDCx",
-      stakeOption2Desc: "Stake USDx or USDCx (Stacks-native stablecoins via ALEX DeFi) to get access. Unstake anytime.",
-      stakeOption3: "Stake STX",
-      stakeOption3Desc: "Stake native STX tokens. Compatible with Stacking rewards via PoX protocol on Stacks mainnet.",
-      stakeComingSoon: "Staking Coming Soon",
-      stakeComingSoonDesc: "We are integrating with ALEX Protocol and Zest Protocol for USDx/USDCx staking on Stacks. Stay tuned!",
+
       stakeCheckBalance: "Check My $THESIS Balance",
     },
     id: {
@@ -340,16 +335,11 @@ export default function App() {
       walletGuideLoginDesc: "Masuk dengan Google untuk menyimpan draf tesis, melihat riwayat generasi, dan mengelola perpustakaan riset kamu di semua perangkat.",
       walletGuideLoginBtn: "Masuk dengan Google",
       walletGuideOrHold: "Atau pegang 1.000 token $THESIS",
-      stakeTitle: "Stake untuk Buka Akses Penuh",
-      stakeDesc: "Buka semua fitur ThesisAI dengan cara stake USDx/USDCx/STX atau memegang 1.000 token $THESIS.",
+      stakeTitle: "Buka Akses Penuh",
+      stakeDesc: "Buka semua fitur ThesisAI dengan memegang 1.000 token $THESIS di dompet yang terhubung.",
       stakeOption1: "Pegang 1.000 $THESIS",
       stakeOption1Desc: "Pegang minimal 1.000 token $THESIS di dompet Stacks yang terhubung untuk membuka semua fitur secara permanen.",
-      stakeOption2: "Stake USDx / USDCx",
-      stakeOption2Desc: "Stake USDx atau USDCx (stablecoin asli Stacks melalui ALEX DeFi) untuk mendapatkan akses. Unstake kapan saja.",
-      stakeOption3: "Stake STX",
-      stakeOption3Desc: "Stake token STX asli. Kompatibel dengan reward Stacking melalui protokol PoX di Stacks mainnet.",
-      stakeComingSoon: "Staking Segera Hadir",
-      stakeComingSoonDesc: "Kami sedang mengintegrasikan dengan ALEX Protocol dan Zest Protocol untuk staking USDx/USDCx di Stacks. Pantau terus!",
+
       stakeCheckBalance: "Cek Saldo $THESIS Saya",
     }
   };
@@ -1513,36 +1503,19 @@ export default function App() {
                 </div>
               </section>
 
-              {/* ── RECOGNITION BADGE SECTION ── */}
+              {/* ── ABOUT / PLATFORM INTRO SECTION ── */}
               <section className="relative overflow-hidden rounded-[2rem] border border-[#b59a6d]/20 bg-gradient-to-br from-[#0f0d09] via-[#0c0d10] to-[#0c0d10] p-8 lg:p-12">
                 <div className="absolute top-0 right-0 w-72 h-72 bg-[#b59a6d]/5 blur-[120px] rounded-full pointer-events-none" />
                 <div className="relative flex flex-col md:flex-row items-center gap-8 lg:gap-12">
 
-                  {/* Badge visual — ThesisAI branded */}
+                  {/* ThesisAI logo */}
                   <div className="flex-shrink-0">
-                    <div className="relative w-64 h-28 bg-gradient-to-r from-[#b59a6d] to-[#d4b87a] rounded-2xl flex items-center px-5 gap-4 shadow-2xl shadow-[#b59a6d]/25 border border-[#f4c95d]/30">
-                      {/* Left: logo panel, slightly tilted like reference */}
-                      <div className="w-16 h-20 bg-white/15 backdrop-blur rounded-xl flex flex-col items-center justify-center flex-shrink-0 border border-white/20" style={{ transform: 'rotate(-4deg)' }}>
-                        <img
-                          src="/ThesisAI_Logo.png"
-                          alt="ThesisAI"
-                          className="w-10 h-10 object-contain"
-                        />
-                      </div>
-                      {/* Right: text */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <div className="w-3 h-3 rounded-full bg-white/30 flex items-center justify-center">
-                            <svg viewBox="0 0 10 10" className="w-2 h-2 fill-white"><polygon points="5,1 6.2,3.8 9,4.2 7,6.2 7.6,9 5,7.5 2.4,9 3,6.2 1,4.2 3.8,3.8"/></svg>
-                          </div>
-                          <span className="text-white text-[8px] font-black uppercase tracking-widest leading-none">ThesisAI®</span>
-                        </div>
-                        <p className="text-white/75 text-[7px] font-bold uppercase tracking-wider leading-tight">Stacks-Powered Academic Intelligence</p>
-                        <p className="text-white text-[9px] font-black leading-snug mt-1.5">Autonomous Research Platform</p>
-                        <div className="mt-2 bg-white rounded-md px-2 py-0.5 inline-block">
-                          <span className="text-[#b59a6d] text-[8px] font-black uppercase tracking-widest">2026</span>
-                        </div>
-                      </div>
+                    <div className="w-28 h-28 rounded-2xl bg-[#b59a6d]/10 border border-[#b59a6d]/25 flex items-center justify-center shadow-2xl shadow-[#b59a6d]/10">
+                      <img
+                        src="/ThesisAI_Logo.png"
+                        alt="ThesisAI"
+                        className="w-16 h-16 object-contain"
+                      />
                     </div>
                   </div>
 
