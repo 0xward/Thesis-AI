@@ -77,13 +77,14 @@ export function StacksWalletProvider({ children }: { children: React.ReactNode }
     setIsConnecting(true);
     setError(null);
     try {
-      const response = await connect();
-      const nextAddress = response?.addresses?.find((a: any) => a.symbol === 'STX')?.address
-        ?? response?.addresses?.[0]?.address
-        ?? readStoredAddress();
+      await connect();
+      // @stacks/connect groups addresses by type: { stx: [...], btc: [...] }.
+      // We specifically want the STX address, never the BTC one.
+      const stored = getLocalStorage();
+      const nextAddress = stored?.addresses?.stx?.[0]?.address;
 
       if (!nextAddress) {
-        throw new Error('Wallet connected but did not return a Stacks address.');
+        throw new Error('Wallet connected but did not return a Stacks (STX) address.');
       }
       setAddress(nextAddress);
     } catch (connectError: any) {

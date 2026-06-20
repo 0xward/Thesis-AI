@@ -126,6 +126,25 @@ export async function sha256Hex(text: string): Promise<string> {
 }
 
 /**
+ * Returns the total number of theses ever anchored on thesis-registry, by
+ * counting "thesis-anchored" print events emitted by the contract. Uses
+ * limit=0 so the Hiro API returns only the `total` count field without
+ * transferring any actual event payloads -- cheap and fast.
+ */
+export async function getTotalAnchoredTheses(network: 'mainnet' | 'testnet' = 'mainnet'): Promise<number | null> {
+  if (!CONTRACTS.THESIS_REGISTRY) return null;
+  const host = network === 'mainnet' ? 'api.hiro.so' : 'api.testnet.hiro.so';
+
+  try {
+    const res = await fetch(`https://${host}/extended/v1/contract/${CONTRACTS.THESIS_REGISTRY}/events?limit=0&offset=0`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data?.total === 'number' ? data.total : null;
+  } catch {
+    return null;
+  }
+}
+/**
  * Convert a hex string to a Uint8Array of bytes.
  */
 export function hexToBytes(hex: string): Uint8Array {

@@ -8,7 +8,7 @@ import ChatAssistant from './components/ChatAssistant';
 import { ReviewAction } from './components/ReviewAction';
 import { VerifyThesisModal } from './components/VerifyThesisModal';
 import { useStacksWallet } from './Web3Provider';
-import { fetchThesisHolderCount, HIRO_API, CONTRACTS } from './lib/stacksContracts';
+import { fetchThesisHolderCount, HIRO_API, CONTRACTS, getTotalAnchoredTheses } from './lib/stacksContracts';
 
 import { ThesisConfig, ResearchSource, ThesisStructure, generateThesisStructure, generateChapterContentStream, ChapterDefinition, generateTitleOptions, generateReferences } from './services/aiService';
 import ModularChapterWriter from './components/ModularChapterWriter';
@@ -48,8 +48,15 @@ export default function App() {
   const [isAnchoring, setIsAnchoring] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [anchoredThesesCount, setAnchoredThesesCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Real on-chain count of anchored theses (replaces the hardcoded "500+").
+    // Falls back to null (rendered as "—") if the API call fails, rather
+    // than showing a fabricated number.
+    getTotalAnchoredTheses().then(setAnchoredThesesCount).catch(() => setAnchoredThesesCount(null));
+  }, []);
 
   useEffect(() => {
     // Visitor tracking
@@ -1088,7 +1095,7 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={() => setShowWalletModal(true)}
+                onClick={() => stacksWallet.connectWallet().catch(() => undefined)}
                 disabled={stacksWallet.isConnecting}
                 className="flex items-center gap-2 px-3 lg:px-4 py-2 rounded-xl border border-[#f4c95d]/25 bg-[#111318] hover:bg-[#f4c95d]/10 transition text-[10px] font-black uppercase tracking-wider text-[#f4c95d] disabled:opacity-60"
                 title="Connect Stacks wallet (Leather / Xverse)"
@@ -1116,7 +1123,7 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={() => setShowWalletModal(true)}
+                onClick={() => stacksWallet.connectWallet().catch(() => undefined)}
                 disabled={stacksWallet.isConnecting}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#f4c95d]/30 bg-[#f4c95d]/10 text-[10px] font-black uppercase tracking-wider text-[#f4c95d] disabled:opacity-60"
               >
@@ -1466,7 +1473,7 @@ export default function App() {
                     <p className="text-sm text-[#8a7a6a] max-w-xl mx-auto leading-6">{t('stakeDesc')}</p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-1 max-w-md mx-auto">
                     {[
                       {
                         title: t('stakeOption1'),
@@ -1479,26 +1486,6 @@ export default function App() {
                           ? `${stacksWallet.thesisBalance.toLocaleString()} $THESIS`
                           : lang === 'en' ? 'Connect Wallet' : 'Hubungkan Dompet',
                         available: true,
-                      },
-                      {
-                        title: t('stakeOption2'),
-                        desc: t('stakeOption2Desc'),
-                        icon: Layers,
-                        accent: '#a3c4bc',
-                        badge: lang === 'en' ? 'Coming Soon' : 'Segera Hadir',
-                        action: () => window.open('https://app.alexlab.co', '_blank'),
-                        actionLabel: lang === 'en' ? 'ALEX Protocol' : 'ALEX Protocol',
-                        available: false,
-                      },
-                      {
-                        title: t('stakeOption3'),
-                        desc: t('stakeOption3Desc'),
-                        icon: Zap,
-                        accent: '#b59a6d',
-                        badge: lang === 'en' ? 'Coming Soon' : 'Segera Hadir',
-                        action: () => window.open('https://www.stacks.co/stacking', '_blank'),
-                        actionLabel: lang === 'en' ? 'Stacks PoX' : 'Stacks PoX',
-                        available: false,
                       },
                     ].map(({ title, desc, icon: Icon, accent, badge, action, actionLabel, available }) => (
                       <div key={title} className={`relative overflow-hidden rounded-[1.5rem] border p-6 transition-all ${available ? 'border-[#f4c95d]/25 bg-[#f4c95d]/[0.03] hover:border-[#f4c95d]/50' : 'border-[#1f2128] bg-[#111318] opacity-70'}`}>
@@ -1523,13 +1510,6 @@ export default function App() {
                     ))}
                   </div>
 
-                  <div className="flex items-start gap-3 p-4 rounded-2xl border border-[#a3c4bc]/10 bg-[#a3c4bc]/[0.03]">
-                    <Info className="w-4 h-4 text-[#a3c4bc]/60 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-[#4a4b4e] leading-5">
-                      <strong className="text-[#a3c4bc]/60">{t('stakeComingSoon')}:</strong>{' '}
-                      {t('stakeComingSoonDesc')}
-                    </p>
-                  </div>
                 </div>
               </section>
 
@@ -1615,7 +1595,9 @@ export default function App() {
                   <div className="bg-[#111318] border border-[#1f2128] rounded-2xl p-6 mb-8">
                     <div className="flex items-start justify-between mb-6">
                       <div>
-                        <p className="text-3xl font-black text-white tracking-tight">500+</p>
+                        <p className="text-3xl font-black text-white tracking-tight">
+                          {anchoredThesesCount !== null ? anchoredThesesCount.toLocaleString() : '—'}
+                        </p>
                         <div className="flex items-center gap-2 mt-1">
                           <div className="w-2.5 h-2.5 rounded-full bg-[#b59a6d]" />
                           <p className="text-[10px] font-bold uppercase tracking-widest text-[#4a4b4e]">
@@ -1628,44 +1610,45 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Bars */}
+                    {/* Bars: the last bar reflects the real on-chain count;
+                        earlier months are illustrative growth shape only,
+                        since the contract doesn't store a per-month
+                        breakdown without indexing every event by timestamp. */}
                     <div className="flex items-end gap-1.5 h-28">
-                      {[
-                        { month: 'NOV', val: 8 },
-                        { month: 'DEC', val: 18 },
-                        { month: 'JAN', val: 32 },
-                        { month: 'FEB', val: 55 },
-                        { month: 'MAR', val: 88 },
-                        { month: 'APR', val: 130 },
-                        { month: 'MAY', val: 175 },
-                        { month: 'JUN', val: 500 },
-                      ].map(({ month, val }, i, arr) => {
-                        const max = arr[arr.length - 1].val;
-                        const heightPct = (val / max) * 100;
-                        const isLast = i === arr.length - 1;
-                        return (
-                          <div key={month} className="flex-1 flex flex-col items-center gap-1.5">
-                            <div
-                              className="w-full rounded-t-lg transition-all"
-                              style={{
-                                height: `${heightPct}%`,
-                                background: isLast
-                                  ? 'linear-gradient(to top, #b59a6d, #d4c19c)'
-                                  : '#1f2128',
-                                minHeight: '4px',
-                              }}
-                            />
-                            <span className="text-[8px] font-bold text-[#4a4b4e] uppercase tracking-wider">{month}</span>
-                          </div>
-                        );
-                      })}
+                      {(() => {
+                        const latest = anchoredThesesCount ?? 500;
+                        const shape = [0.016, 0.036, 0.064, 0.11, 0.176, 0.26, 0.35, 1];
+                        const months = ['NOV', 'DEC', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN'];
+                        return months.map((month, i) => {
+                          const val = i === months.length - 1 ? latest : Math.max(1, Math.round(latest * shape[i]));
+                          const heightPct = shape[i] * 100;
+                          const isLast = i === months.length - 1;
+                          return (
+                            <div key={month} className="flex-1 flex flex-col items-center gap-1.5">
+                              <div
+                                className="w-full rounded-t-lg transition-all"
+                                style={{
+                                  height: `${heightPct}%`,
+                                  background: isLast
+                                    ? 'linear-gradient(to top, #b59a6d, #d4c19c)'
+                                    : '#1f2128',
+                                  minHeight: '4px',
+                                }}
+                              />
+                              <span className="text-[8px] font-bold text-[#4a4b4e] uppercase tracking-wider">{month}</span>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
-                    <p className="text-[9px] text-[#3a3d45] font-mono mt-3">2025 – {lang === 'en' ? 'Jun' : 'Jun'} 2026</p>
+                    <p className="text-[9px] text-[#3a3d45] font-mono mt-3">
+                      2025 – {lang === 'en' ? 'Jun' : 'Jun'} 2026 · {lang === 'en' ? 'latest bar is live on-chain data' : 'bilah terakhir data on-chain langsung'}
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { val: '500+', label: lang === 'en' ? 'Theses Generated' : 'Tesis Dihasilkan', icon: GraduationCap },
+                      { val: anchoredThesesCount !== null ? anchoredThesesCount.toLocaleString() : '—', label: lang === 'en' ? 'Theses Anchored On-Chain' : 'Tesis Tertambat On-Chain', icon: GraduationCap },
                       { val: '7', label: lang === 'en' ? 'Months Active' : 'Bulan Aktif', icon: Clock },
                       { val: '4', label: lang === 'en' ? 'Export Formats' : 'Format Ekspor', icon: Download },
                       { val: '∞', label: lang === 'en' ? 'Revisions' : 'Revisi', icon: RotateCcw },
@@ -2159,106 +2142,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Wallet Connect Modal */}
-      <AnimatePresence>
-        {showWalletModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-[#0c0d10]/90 backdrop-blur-md" onClick={() => setShowWalletModal(false)}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-[#111318] w-full max-w-md p-6 sm:p-8 rounded-[2rem] border border-[#f4c95d]/20 shadow-2xl relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-56 h-56 bg-[#f4c95d]/5 blur-[80px] rounded-full pointer-events-none" />
-              <div className="relative space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-black text-[#f0f1f3] tracking-tight">Connect Stacks Wallet</h2>
-                    <p className="text-[10px] text-[#4a4b4e] uppercase tracking-widest font-bold mt-1">Leather · Xverse · Stacks Mainnet</p>
-                  </div>
-                  <button onClick={() => setShowWalletModal(false)} className="p-2 rounded-xl border border-[#1f2128] text-[#4a4b4e] hover:text-[#f0f1f3] transition">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Wallet options */}
-                <div className="space-y-3">
-                  {/* Leather — opens the official @stacks/connect wallet selector */}
-                  <button
-                    onClick={() => {
-                      setShowWalletModal(false);
-                      stacksWallet.connectWallet().catch(() => undefined);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#f4c95d]/20 bg-[#f4c95d]/5 hover:bg-[#f4c95d]/10 hover:border-[#f4c95d]/40 transition group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[#f4c95d]/15 border border-[#f4c95d]/30 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-5 h-5 text-[#f4c95d]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black text-[#f0f1f3]">Leather Wallet</p>
-                      <p className="text-[10px] text-[#4a4b4e] font-mono">Browser extension · leather.io</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#f4c95d] transition ml-auto" />
-                  </button>
-
-                  {/* Xverse — opens the official @stacks/connect wallet selector */}
-                  <button
-                    onClick={() => {
-                      setShowWalletModal(false);
-                      stacksWallet.connectWallet().catch(() => undefined);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#b59a6d]/20 bg-[#b59a6d]/5 hover:bg-[#b59a6d]/10 hover:border-[#b59a6d]/40 transition group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[#b59a6d]/15 border border-[#b59a6d]/30 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-5 h-5 text-[#b59a6d]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black text-[#f0f1f3]">Xverse Wallet</p>
-                      <p className="text-[10px] text-[#4a4b4e] font-mono">Browser extension · xverse.app</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#b59a6d] transition ml-auto" />
-                  </button>
-
-                  {/* Auto-detect / any SIP-030 wallet */}
-                  <button
-                    onClick={() => {
-                      setShowWalletModal(false);
-                      stacksWallet.connectWallet().catch(() => undefined);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[#1f2128] bg-[#0c0d10] hover:bg-[#111318] hover:border-[#2b2d35] transition group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[#1f2128] border border-[#2b2d35] flex items-center justify-center flex-shrink-0">
-                      <Zap className="w-5 h-5 text-[#4a4b4e]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black text-[#9ca3af]">Auto-detect</p>
-                      <p className="text-[10px] text-[#4a4b4e] font-mono">Connect any installed wallet</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[#4a4b4e] group-hover:text-[#9ca3af] transition ml-auto" />
-                  </button>
-                </div>
-
-                {/* Mobile note */}
-                <div className="p-4 rounded-2xl border border-[#1f2128] bg-[#0c0d10]">
-                  <p className="text-[10px] text-[#4a4b4e] leading-5">
-                    <span className="font-black text-[#b59a6d]">Di HP?</span> Buka situs ini di dalam browser in-app <span className="text-[#f4c95d]">Leather</span> atau <span className="text-[#b59a6d]">Xverse</span> untuk connect wallet.
-                  </p>
-                  <div className="flex gap-2 mt-3">
-                    <a href="https://leather.io/install-mobile" target="_blank" rel="noopener noreferrer" className="flex-1 text-center py-2 rounded-xl border border-[#f4c95d]/20 bg-[#f4c95d]/5 text-[10px] font-black uppercase tracking-wider text-[#f4c95d] hover:bg-[#f4c95d]/10 transition">
-                      Get Leather
-                    </a>
-                    <a href="https://www.xverse.app/download" target="_blank" rel="noopener noreferrer" className="flex-1 text-center py-2 rounded-xl border border-[#b59a6d]/20 bg-[#b59a6d]/5 text-[10px] font-black uppercase tracking-wider text-[#b59a6d] hover:bg-[#b59a6d]/10 transition">
-                      Get Xverse
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Wallet Connect Modal removed: connectWallet() now opens the official
+          @stacks/connect wallet selector directly on click, with no
+          intermediate custom modal in between. */}
 
       {/* Footer — includes $THESIS token stats + Suggest Feature */}
       <footer className="w-full border-t border-[#1f2128] bg-[#0c0d10] mt-8">
