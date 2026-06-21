@@ -7,3 +7,4 @@ previous check - this is a real liveness signal, not an activity filler.
 
 date | registry | certificate-v1
 -----|----------|---------------
+2026-06-21 | registry=true | certificate-v1=true
