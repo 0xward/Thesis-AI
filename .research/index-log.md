@@ -450,3 +450,9 @@
 - Stacks anchor block: `8351275`
 - Source index verified: `2026-06-20`
 - Citation layer: Stacks mainnet
+
+## 2026-06-21T10:23:56Z
+
+- Stacks anchor block: `8356409`
+- Source index verified: `2026-06-21`
+- Citation layer: Stacks mainnet
