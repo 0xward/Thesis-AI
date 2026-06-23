@@ -588,3 +588,9 @@
 - Stacks anchor block: `8381372`
 - Source index verified: `2026-06-23`
 - Citation layer: Stacks mainnet
+
+## 2026-06-23T20:57:16Z
+
+- Stacks anchor block: `8381953`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
