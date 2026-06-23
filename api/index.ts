@@ -283,7 +283,7 @@ Sources:
 ${sourceBlock(sources, 10000)}`;
       const text = await groqText(
         [
-          { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+          { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
           { role: 'user', content: prompt },
         ],
         { json: true, temperature: 0.4, maxTokens: 2048 }
@@ -311,6 +311,7 @@ ${sourceBlock(sources, 10000)}`;
 Academic Major: ${config.major}
 Tone/Formal: ${config.writingStyle}
 Target Complexity: ${lengthGuidance}
+Language: write the title, all chapter_title, summary, and subchapters fields entirely in ${config.targetLanguage || 'English'}.
 ${
   customTitle
     ? `Use exactly this title: "${customTitle}"`
@@ -321,7 +322,7 @@ Sources:
 ${sourceBlock(sources, 50000)}`;
       const text = await groqText(
         [
-          { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+          { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
           { role: 'user', content: prompt },
         ],
         { json: true, temperature: 0.25, maxTokens: 4096 }
@@ -344,16 +345,20 @@ Sources:
 ${sourceBlock(sources, 5000)}`;
       const content = await groqText(
         [
-          { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+          { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
           { role: 'user', content: prompt },
         ],
         { temperature: 0.2, maxTokens: 4096 }
       );
+      const referencesChapterTitles: Record<string, string> = {
+        indonesian: 'Daftar Pustaka',
+        malay: 'Rujukan',
+        arabic: 'المراجع',
+        english: 'References',
+      };
       res.json({
         chapterTitle:
-          String(config.targetLanguage || '').toLowerCase() === 'indonesian'
-            ? 'Daftar Pustaka'
-            : 'References',
+          referencesChapterTitles[String(config.targetLanguage || '').toLowerCase()] || 'References',
         content: content || 'No references could be generated.',
       });
     } catch (error: any) {
@@ -382,6 +387,7 @@ Level/Major: ${config.thesisLevel} / ${config.major}
 Style: ${config.writingStyle}
 Target Depth: ${lengthGuidance}
 Citation Style: ${config.citationStyle}
+Language: write the entire chapter, all headings, and all body text entirely in ${config.targetLanguage || 'English'}.
 Chapter Title: ${chapter.chapter_title}
 Chapter Goals: ${chapter.summary}
 Subchapters:
@@ -405,7 +411,7 @@ ${sourceBlock(sources, 50000)}`;
       try {
         groqResponse = await callGroq(
           [
-            { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+            { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
             { role: 'user', content: prompt },
           ],
           { stream: true, temperature: 0.35, maxTokens: 12000 }
@@ -414,7 +420,7 @@ ${sourceBlock(sources, 50000)}`;
         if (error.isRateLimit) {
           groqResponse = await callGroq(
             [
-              { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+              { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
               { role: 'user', content: prompt },
             ],
             { stream: true, temperature: 0.35, maxTokens: 12000, model: GROQ_FALLBACK }
@@ -462,7 +468,7 @@ Section to write: ${subchapterTitle}
 Chapter goals: ${chapterGoals || ''}
 Level / Major: ${config?.thesisLevel || 'Undergraduate'} / ${config?.major || ''}
 Citation Style: ${config?.citationStyle || 'APA'}
-Language: ${config?.targetLanguage || 'English'}
+Language: write this entire section, its heading, and all body text entirely in ${config?.targetLanguage || 'English'}.
 
 Rules:
 1. Start with an H2 heading matching the section title.
@@ -482,7 +488,7 @@ ${sourceBlock(sources, 30000)}`;
       try {
         groqResponse = await callGroq(
           [
-            { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+            { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
             { role: 'user', content: prompt },
           ],
           { stream: true, temperature: 0.35, maxTokens: 700 }
@@ -491,7 +497,7 @@ ${sourceBlock(sources, 30000)}`;
         if (error.isRateLimit) {
           groqResponse = await callGroq(
             [
-              { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+              { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
               { role: 'user', content: prompt },
             ],
             { stream: true, temperature: 0.35, maxTokens: 700, model: GROQ_FALLBACK }
@@ -529,13 +535,14 @@ Rules:
 2. Keep the same approximate length (350-450 words).
 3. Improve sentence variety, academic vocabulary, and logical flow.
 4. Use (Author, Year) citations. NO [Source X] tags.
-5. Do not change the core meaning or argument.`;
+5. Do not change the core meaning or argument.
+6. Write the refined section entirely in ${config?.targetLanguage || 'English'}.`;
 
       let groqResponse;
       try {
         groqResponse = await callGroq(
           [
-            { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+            { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
             { role: 'user', content: prompt },
           ],
           { stream: true, temperature: 0.3, maxTokens: 800 }
@@ -544,7 +551,7 @@ Rules:
         if (error.isRateLimit) {
           groqResponse = await callGroq(
             [
-              { role: 'system', content: GHOSTWRITER_SYSTEM_PROMPT },
+              { role: 'system', content: thesisSystemPrompt(config?.targetLanguage) },
               { role: 'user', content: prompt },
             ],
             { stream: true, temperature: 0.3, maxTokens: 800, model: GROQ_FALLBACK }
@@ -766,26 +773,38 @@ Rules:
       // Re-verify on-chain BEFORE minting: the hash must actually be anchored,
       // and its owner must match the recipient the request claims. This is
       // the server-side half of the same check thesis-certificate-v2.clar
-      // enforces on-chain — belt and suspenders, since a malicious or buggy
+      // enforces on-chain - belt and suspenders, since a malicious or buggy
       // frontend should never be able to get an unearned certificate minted.
+      //
+      // IMPORTANT: the Hiro call-read endpoint expects each argument as a
+      // Clarity-serialized hex value (with its type byte and length prefix),
+      // NOT a raw hex buffer. Cl.buffer(...) + cvToHex(...) produces the
+      // correct format; passing the raw hash hex directly (as an earlier
+      // version of this code did) fails silently with okay:false.
+      const { Cl, cvToHex } = require('@stacks/transactions');
       const HIRO_API = 'https://api.hiro.so';
       const readOnlyUrl = `${HIRO_API}/v2/contracts/call-read/${registryAddress}/${registryName}/get-proof`;
+      const hashArgHex = cvToHex(Cl.buffer(Buffer.from(thesisHash, 'hex')));
       const proofRes = await axios.post(readOnlyUrl, {
         sender: registryAddress,
-        arguments: [`0x${Buffer.from(thesisHash, 'hex').toString('hex')}`],
-      }, { headers: { 'Content-Type': 'application/json' } }).catch(() => null);
+        arguments: [hashArgHex],
+      }, { headers: { 'Content-Type': 'application/json' } }).catch((err: any) => {
+        console.error('[certificates/mint] proof check request failed:', err?.message || err);
+        return null;
+      });
 
       if (!proofRes?.data?.okay) {
+        console.error('[certificates/mint] proof check returned not-okay:', proofRes?.data);
         return res.status(502).json({ error: 'Could not verify thesis anchor status on-chain. Try again shortly.' });
       }
 
       // The read-only call returns a hex-encoded Clarity value; rather than
       // hand-rolling a Clarity value parser here, we rely on the contract's
       // own `mint` function to perform the authoritative check (it calls
-      // get-proof internally and asserts ownership) — this read here is a
+      // get-proof internally and asserts ownership) - this read here is a
       // fast pre-check to fail fast with a clear error message, not the
       // sole guarantee of correctness.
-      const { makeContractCall, broadcastTransaction, Cl } = require('@stacks/transactions');
+      const { makeContractCall, broadcastTransaction } = require('@stacks/transactions');
 
       const transaction = await makeContractCall({
         contractAddress: certAddress,

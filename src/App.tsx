@@ -7,6 +7,7 @@ import Markdown from 'react-markdown';
 import ChatAssistant from './components/ChatAssistant';
 import { ReviewAction } from './components/ReviewAction';
 import { VerifyThesisModal } from './components/VerifyThesisModal';
+import { PaginatedThesisView } from './components/PaginatedThesisView';
 import { useStacksWallet } from './Web3Provider';
 import { fetchThesisHolderCount, HIRO_API, CONTRACTS, getTotalAnchoredTheses } from './lib/stacksContracts';
 
@@ -50,6 +51,10 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [anchoredThesesCount, setAnchoredThesesCount] = useState<number | null>(null);
+  // Tracks how many physical A4 pages each chapter actually rendered to,
+  // so page numbers keep counting up correctly across chapter boundaries
+  // (e.g. chapter 1 ends on page 4, chapter 2 starts on page 5).
+  const [chapterPageCounts, setChapterPageCounts] = useState<number[]>([]);
 
   useEffect(() => {
     // Real on-chain count of anchored theses (replaces the hardcoded "500+").
@@ -2049,31 +2054,29 @@ export default function App() {
                  </div>
 
                  <div className="lg:col-span-3 space-y-8 lg:space-y-16 pb-[30vh]">
-                    {generatedThesis.map((genCh, idx) => (
-                      <div key={idx} id={`chapter-${idx}`} className="flex flex-col items-center">
-                        <div
-                          className={cn(
-                            "academic-paper shadow-2xl relative",
-                            config.fontFamily === 'Serif' ? "academic-paper-serif" : "academic-paper-sans"
-                          )}
-                          style={{overflowWrap: 'break-word', wordWrap: 'break-word', wordBreak: 'normal'}}
-                        >
-                           <div className="absolute top-8 right-12 text-[10px] text-gray-400 font-mono opacity-20 uppercase tracking-[0.2em]">
-                             {idx === 0 ? "Thesis Final Version" : null}
-                           </div>
-                           <div className="absolute bottom-10 left-0 right-0 text-center text-[10px] text-gray-400 font-serif italic tracking-widest opacity-50">
-                             Page {idx + 1}
-                           </div>
-                           <div className="prose prose-slate max-w-none">
-                             <Markdown components={markdownComponents}>{processContentForUI(genCh.content)}</Markdown>
-                           </div>
+                    {generatedThesis.map((genCh, idx) => {
+                      // Sum of physical pages from all earlier chapters, so
+                      // numbering continues correctly across chapter boundaries.
+                      const startPageNumber = chapterPageCounts.slice(0, idx).reduce((sum, n) => sum + n, 0) + 1;
+                      return (
+                        <div key={idx} id={`chapter-${idx}`}>
+                          <PaginatedThesisView
+                            content={processContentForUI(genCh.content)}
+                            components={markdownComponents}
+                            fontFamily={config.fontFamily}
+                            startPageNumber={startPageNumber}
+                            onPageCountChange={(count) => {
+                              setChapterPageCounts((prev) => {
+                                if (prev[idx] === count) return prev;
+                                const next = [...prev];
+                                next[idx] = count;
+                                return next;
+                              });
+                            }}
+                          />
                         </div>
-                        {/* Page break simulation */}
-                        <div className="h-4 lg:h-12 w-full flex items-center justify-center opacity-5">
-                          <div className="w-1/3 h-px bg-white" />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Modular Chapter Writer — interactive section-by-section generation */}
                     {isGenerating && structure && !isFinished && (
