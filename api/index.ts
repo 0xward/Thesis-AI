@@ -766,26 +766,38 @@ Rules:
       // Re-verify on-chain BEFORE minting: the hash must actually be anchored,
       // and its owner must match the recipient the request claims. This is
       // the server-side half of the same check thesis-certificate-v2.clar
-      // enforces on-chain — belt and suspenders, since a malicious or buggy
+      // enforces on-chain - belt and suspenders, since a malicious or buggy
       // frontend should never be able to get an unearned certificate minted.
+      //
+      // IMPORTANT: the Hiro call-read endpoint expects each argument as a
+      // Clarity-serialized hex value (with its type byte and length prefix),
+      // NOT a raw hex buffer. Cl.buffer(...) + cvToHex(...) produces the
+      // correct format; passing the raw hash hex directly (as an earlier
+      // version of this code did) fails silently with okay:false.
+      const { Cl, cvToHex } = require('@stacks/transactions');
       const HIRO_API = 'https://api.hiro.so';
       const readOnlyUrl = `${HIRO_API}/v2/contracts/call-read/${registryAddress}/${registryName}/get-proof`;
+      const hashArgHex = cvToHex(Cl.buffer(Buffer.from(thesisHash, 'hex')));
       const proofRes = await axios.post(readOnlyUrl, {
         sender: registryAddress,
-        arguments: [`0x${Buffer.from(thesisHash, 'hex').toString('hex')}`],
-      }, { headers: { 'Content-Type': 'application/json' } }).catch(() => null);
+        arguments: [hashArgHex],
+      }, { headers: { 'Content-Type': 'application/json' } }).catch((err: any) => {
+        console.error('[certificates/mint] proof check request failed:', err?.message || err);
+        return null;
+      });
 
       if (!proofRes?.data?.okay) {
+        console.error('[certificates/mint] proof check returned not-okay:', proofRes?.data);
         return res.status(502).json({ error: 'Could not verify thesis anchor status on-chain. Try again shortly.' });
       }
 
       // The read-only call returns a hex-encoded Clarity value; rather than
       // hand-rolling a Clarity value parser here, we rely on the contract's
       // own `mint` function to perform the authoritative check (it calls
-      // get-proof internally and asserts ownership) — this read here is a
+      // get-proof internally and asserts ownership) - this read here is a
       // fast pre-check to fail fast with a clear error message, not the
       // sole guarantee of correctness.
-      const { makeContractCall, broadcastTransaction, Cl } = require('@stacks/transactions');
+      const { makeContractCall, broadcastTransaction } = require('@stacks/transactions');
 
       const transaction = await makeContractCall({
         contractAddress: certAddress,
