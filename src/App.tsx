@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Link, Upload, BookOpen, Settings, Play, CheckCircle, Download, Loader2, ArrowRight, ChevronDown, ChevronRight, Wand2, RotateCcw, LogOut, LayoutDashboard, Save, Trash2, Clock, Globe, Info, Heart, Share, Sparkles, ShieldCheck, Network, Wallet, Rocket, Cpu, GraduationCap, Languages, Layers, Lock, Zap, Menu, X } from 'lucide-react';
+import { FileText, Link, Upload, BookOpen, Settings, Play, CheckCircle, Download, Loader2, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Wand2, RotateCcw, LogOut, LayoutDashboard, Save, Trash2, Clock, Globe, Info, Heart, Share, Sparkles, ShieldCheck, Network, Wallet, Rocket, Cpu, GraduationCap, Languages, Layers, Lock, Zap, Menu, X } from 'lucide-react';
 import { cn } from './lib/utils';
 import axios from 'axios';
 import Markdown from 'react-markdown';
@@ -8,6 +8,7 @@ import ChatAssistant from './components/ChatAssistant';
 import { ReviewAction } from './components/ReviewAction';
 import { VerifyThesisModal } from './components/VerifyThesisModal';
 import { PaginatedThesisView } from './components/PaginatedThesisView';
+import { FloatingActionBar } from './components/FloatingActionBar';
 import { useStacksWallet } from './Web3Provider';
 import { fetchThesisHolderCount, HIRO_API, CONTRACTS, getTotalAnchoredTheses } from './lib/stacksContracts';
 
@@ -2110,6 +2111,51 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Floating Action Bar — keeps export/anchor/mint/review reachable
+          without scrolling back to the header toolbar, especially once a
+          thesis spans many paginated A4 pages. */}
+      <FloatingActionBar
+        visible={step === 3 && isFinished}
+        onDownloadDocx={downloadDocx}
+        onDownloadPdf={downloadPdf}
+        onShare={shareThesis}
+        isWalletConnected={stacksWallet.isConnected}
+        isAnchoring={isAnchoring}
+        anchorTxid={anchorTxid}
+        onAnchor={async () => {
+          if (!structure) return;
+          try {
+            setIsAnchoring(true);
+            const txid = await stacksWallet.anchorThesis(structure.title, getThesisMarkdown());
+            setAnchorTxid(txid);
+          } catch (e: any) {
+            alert(e.message ?? 'Anchoring failed.');
+          } finally {
+            setIsAnchoring(false);
+          }
+        }}
+        isMinting={isMinting}
+        mintTxid={mintTxid}
+        onMint={async () => {
+          if (!structure) return;
+          try {
+            setIsMinting(true);
+            const txid = await stacksWallet.mintCertificate(structure.title, getThesisMarkdown());
+            setMintTxid(txid);
+          } catch (e: any) {
+            alert(e.message ?? 'Minting failed.');
+          } finally {
+            setIsMinting(false);
+          }
+        }}
+        onScrollToTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        reviewSlot={
+          anchorTxid !== null ? (
+            <ReviewAction thesisMarkdown={getThesisMarkdown()} isAnchored={anchorTxid !== null} />
+          ) : null
+        }
+      />
 
       {/* Verify Thesis Modal */}
       <AnimatePresence>
