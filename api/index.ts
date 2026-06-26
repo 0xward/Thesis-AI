@@ -151,12 +151,25 @@ async function pipeGroqStream(groqResponse: Response, res: any) {
 }
 
 // ─── System prompt (used by chat / non-ghostwriter endpoints) ─────────────────
+// Some language pairs are linguistically close enough that LLMs frequently
+// default to the more common one in their training data instead of the one
+// actually requested. This map adds an explicit disambiguation clause for
+// those cases, appended to the system prompt only when relevant.
+const LANGUAGE_DISAMBIGUATION: Record<string, string> = {
+  Malay:
+    'IMPORTANT: "Malay" means standard Bahasa Malaysia/Brunei, which is DIFFERENT from Indonesian. ' +
+    'Do not write in Indonesian. Use Malaysian/Brunei vocabulary and spelling conventions ' +
+    '(e.g. "kerajaan" not "pemerintah" for government in some contexts, "pejabat" spelling conventions, ' +
+    'and standard Malaysian academic register), not Indonesian ones.',
+};
+
 function thesisSystemPrompt(targetLanguage = 'English') {
-  return `You are ThesisAI, an expert academic writing assistant. You respond in ${targetLanguage}.
+  const disambiguation = LANGUAGE_DISAMBIGUATION[targetLanguage] ? `\n${LANGUAGE_DISAMBIGUATION[targetLanguage]}` : '';
+  return `You are ThesisAI, an expert academic writing assistant. You MUST write your entire response in ${targetLanguage} - every heading, every sentence, every word.${disambiguation}
 CRITICAL RULES:
 - NEVER invent citations, authors, or publication data.
 - STRICTLY NO [Source X] tags. Use (Author, Year) format only.
-- Always respond in ${targetLanguage} unless explicitly asked otherwise.`;
+- The ENTIRE response must be in ${targetLanguage}, with no exceptions, regardless of what language the source material is written in.`;
 }
 
 function sourceBlock(sources: any[], limit = 50000) {
@@ -806,19 +819,44 @@ Rules:
       // sole guarantee of correctness.
       const { makeContractCall, broadcastTransaction } = require('@stacks/transactions');
 
-      const transaction = await makeContractCall({
-        contractAddress: certAddress,
-        contractName: certName,
-        functionName: 'mint',
-        functionArgs: [
-          Cl.principal(recipient),
-          Cl.buffer(Buffer.from(thesisHash, 'hex')),
-          Cl.stringAscii(metadataUri.slice(0, 256)),
-        ],
-        senderKey: backendKey,
-        network,
-        validateWithAbi: true,
-      });
+      // Defensive validation with detailed logging: every address that
+      // will be passed into makeContractCall is checked and logged before
+      // use, so if a "must start with S" error happens again, the logs
+      // will show exactly which value was malformed instead of just the
+      // generic library error message.
+      const addressesToCheck: Record<string, string> = {
+        recipient,
+        certAddress,
+        registryAddress,
+      };
+      for (const [label, value] of Object.entries(addressesToCheck)) {
+        const looksValid = typeof value === 'string' && /^S[A-Z0-9]{25,}$/.test(value);
+        console.log(`[certificates/mint] address check - ${label}: "${value}" (looksValid=${looksValid}, length=${value?.length})`);
+        if (!looksValid) {
+          return res.status(400).json({ error: `Invalid Stacks address for ${label}: "${value}". Expected a mainnet address starting with S.` });
+        }
+      }
+      console.log(`[certificates/mint] certAddress=${certAddress} certName=${certName} network=${network}`);
+
+      let transaction;
+      try {
+        transaction = await makeContractCall({
+          contractAddress: certAddress,
+          contractName: certName,
+          functionName: 'mint',
+          functionArgs: [
+            Cl.principal(recipient),
+            Cl.buffer(Buffer.from(thesisHash, 'hex')),
+            Cl.stringAscii(metadataUri.slice(0, 256)),
+          ],
+          senderKey: backendKey,
+          network,
+          validateWithAbi: true,
+        });
+      } catch (buildError: any) {
+        console.error('[certificates/mint] makeContractCall failed:', buildError?.message, buildError?.stack);
+        return res.status(500).json({ error: `Failed to build mint transaction: ${buildError?.message || 'unknown error'}` });
+      }
 
       const broadcastResponse = await broadcastTransaction({ transaction, network });
 
@@ -874,6 +912,51 @@ Rules:
       res.send(docxBuffer);
     } catch (error: any) {
       console.error('DOCX Export error:', error.message);
+      res.status(500).json({ error: 'Failed to generate DOCX: ' + error.message });
+    }
+  });
+
+  // ── Export DOCX (base64 fallback) ──────────────────────────────────────────
+  // Some in-app wallet browsers (Xverse, Leather) run a webview that cannot
+  // resolve blob: URLs created by URL.createObjectURL, so the normal
+  // /api/export-docx blob download silently does nothing there. This
+  // endpoint returns the same file as a base64 string in JSON instead, so
+  // the frontend can build a data: URI and navigate to it directly, which
+  // works in webviews that can't handle blobs.
+  app.post('/api/export-docx-base64', async (req: any, res: any) => {
+    try {
+      const { markdown, title } = req.body;
+      if (!markdown) return res.status(400).json({ error: 'Markdown content is required' });
+
+      const { marked } = await import('marked');
+      const htmlToDocxModule = await import('html-to-docx');
+      const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
+      const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
+      if (!generator) throw new Error('HTMLToDOCX module not found');
+
+      const htmlContent = await marked.parse(markdown);
+      const processedHtml = htmlContent.replace(
+        /<h1>BAB (.*?)[:\-\n](.*?)<\/h1>/gi,
+        (_match: string, bab: string, t: string) =>
+          `<div style="page-break-before: always;"></div><h1 style="text-align: center; line-height: 1.2;">BAB ${bab.trim()}<br>${t.trim()}</h1>`
+      );
+      const finalHtml = processedHtml.replace(
+        /<h1>(?!BAB)(.*?)<\/h1>/gi,
+        '<div style="page-break-before: always;"></div><h1 style="text-align: center;">$1</h1>'
+      );
+      const styledHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 2;">${finalHtml}</div></body></html>`;
+
+      const docxBuffer = await generator(styledHtml, null, {
+        title: title || 'Thesis',
+        margins: { top: 1700, right: 1700, bottom: 1700, left: 2270 },
+        pageSize: { width: 11906, height: 16838 },
+      });
+
+      const base64 = Buffer.from(docxBuffer).toString('base64');
+      const filename = `${(title || 'Thesis').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`;
+      res.json({ base64, filename, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    } catch (error: any) {
+      console.error('DOCX Export (base64) error:', error.message);
       res.status(500).json({ error: 'Failed to generate DOCX: ' + error.message });
     }
   });

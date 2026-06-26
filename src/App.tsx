@@ -9,6 +9,7 @@ import { ReviewAction } from './components/ReviewAction';
 import { VerifyThesisModal } from './components/VerifyThesisModal';
 import { PaginatedThesisView } from './components/PaginatedThesisView';
 import { FloatingActionBar } from './components/FloatingActionBar';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { useStacksWallet } from './Web3Provider';
 import { fetchThesisHolderCount, HIRO_API, CONTRACTS, getTotalAnchoredTheses } from './lib/stacksContracts';
 
@@ -28,7 +29,8 @@ interface Revision {
 
 export default function App() {
   const stacksWallet = useStacksWallet();
-  const [lang, setLang] = useState<'en' | 'id'>('en');
+  type AppLanguage = 'en' | 'id' | 'ms' | 'ar' | 'es' | 'pt' | 'ru' | 'fr' | 'vi' | 'th' | 'hi' | 'fa' | 'ja' | 'ko' | 'ha' | 'sw';
+  const [lang, setLang] = useState<AppLanguage>('en');
 
   const [showAbout, setShowAbout] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -51,6 +53,7 @@ export default function App() {
   const [isMinting, setIsMinting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [showMobileDisconnect, setShowMobileDisconnect] = useState(false);
   const [anchoredThesesCount, setAnchoredThesesCount] = useState<number | null>(null);
   // Tracks how many physical A4 pages each chapter actually rendered to,
   // so page numbers keep counting up correctly across chapter boundaries
@@ -104,6 +107,7 @@ export default function App() {
         loadUserTheses();
       } else {
         setSavedTheses([]);
+        resetWorkspace();
       }
     });
 
@@ -149,6 +153,10 @@ export default function App() {
       .catch(() => setCertificates([]));
   }, [stacksWallet.address]);
 
+  useEffect(() => {
+    if (!stacksWallet.isConnected) setShowMobileDisconnect(false);
+  }, [stacksWallet.isConnected]);
+
   const login = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
@@ -165,11 +173,34 @@ export default function App() {
   const logout = async () => {
     try {
       await signOut(auth);
+      resetWorkspace();
       setStep(1);
       setView('landing');
     } catch (e: any) {
       alert("Logout failed: " + e.message);
     }
+  };
+
+  /**
+   * Clears every piece of in-memory workspace state: research sources,
+   * thesis structure, generated chapters, form inputs, and on-chain action
+   * results (anchor/mint txids). Without this, switching accounts (or
+   * switching wallets) in the same browser tab left the previous person's
+   * pasted text, uploaded files, and generated thesis content visible to
+   * whoever used the tab next, since React state isn't tied to Firebase
+   * auth state or wallet connection state automatically.
+   */
+  const resetWorkspace = () => {
+    setSources([]);
+    setUrlInput('');
+    setTextInput('');
+    setTitleInput('');
+    setStructure(null);
+    setGeneratedThesis([]);
+    setChapterPageCounts([]);
+    setAnchorTxid(null);
+    setMintTxid(null);
+    setIsFinished(false);
   };
 
   const t = (key: keyof typeof translations['en']) => {
@@ -262,6 +293,22 @@ export default function App() {
       stakeOption1Desc: "Hold at least 1,000 $THESIS tokens in your connected Stacks wallet to unlock all features permanently.",
 
       stakeCheckBalance: "Check My $THESIS Balance",
+
+      saveUnlimitedDrafts: "Save unlimited thesis drafts to your library",
+      accessGenHistory: "Access generation history & revisions",
+      syncDevices: "Sync across devices automatically",
+      viewCertificates: "View & manage minted certificates",
+      signedInAsPrefix: "Signed in as",
+      accessGate: "Access Gate",
+      activeNow: "Active Now",
+      connectWalletBtn: "Connect Wallet",
+      communityTraction: "Community Traction",
+      researchersGenerating: "Researchers are already generating.",
+      thesesGenerated: "Theses Generated",
+      latestBarLive: "latest bar is live on-chain data",
+      monthsActive: "Months Active",
+      exportFormatsLabel: "Export Formats",
+      revisionsLabel: "Revisions",
     },
     id: {
       tagline: "Agen Riset Otonom",
@@ -347,6 +394,1422 @@ export default function App() {
       stakeOption1Desc: "Pegang minimal 1.000 token $THESIS di dompet Stacks yang terhubung untuk membuka semua fitur secara permanen.",
 
       stakeCheckBalance: "Cek Saldo $THESIS Saya",
+
+      saveUnlimitedDrafts: "Simpan draf tesis tak terbatas ke perpustakaanmu",
+      accessGenHistory: "Akses riwayat generasi & revisi",
+      syncDevices: "Sinkronisasi otomatis di semua perangkat",
+      viewCertificates: "Lihat & kelola sertifikat yang dicetak",
+      signedInAsPrefix: "Masuk sebagai",
+      accessGate: "Gerbang Akses",
+      activeNow: "Aktif Sekarang",
+      connectWalletBtn: "Hubungkan Dompet",
+      communityTraction: "Adopsi Komunitas",
+      researchersGenerating: "Para peneliti sudah mulai membuat.",
+      thesesGenerated: "Tesis Dihasilkan",
+      latestBarLive: "bilah terakhir data on-chain langsung",
+      monthsActive: "Bulan Aktif",
+      exportFormatsLabel: "Format Ekspor",
+      revisionsLabel: "Revisi",
+    },
+    ms: {
+      tagline: "Agen Penyelidikan Autonomi",
+      heroBadge: "Kecerdasan akademik berkuasa Stacks",
+      heroTitle: "Ubah sumber penyelidikan kepada ruang kerja tesis yang kemas.",
+      heroDesc: "ThesisAI menggabungkan AI berkelajuan Groq, penulisan sedar-sitasi, alat eksport, dan pelan tindak lapisan bukti berasaskan Stacks supaya pelajar boleh bergerak daripada sumber mentah ke kerja akademik berstruktur tanpa keliru.",
+      launchStudio: "Lancarkan Studio Penyelidikan",
+      connectStacks: "Terokai Lapisan Stacks",
+      stacksNote: "Dibina dengan pelan keselamatan bertaraf Stacks: provenans penyelidikan yang boleh disahkan, pembuktian cincang dokumen, dan pengesahan on-chain masa depan — tanpa mengganggu aliran penulisan anda.",
+      aiModels: "Rangkaian Model AI Groq",
+      aiModelsDesc: "Mengarahkan tugas penyelidikan merentasi Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, dan model sandaran pantas dari pelayan.",
+      sourceIngestion: "Pengambilan Sumber",
+      sourceIngestionDesc: "Tambah URL, tampal teks, atau muat naik dokumen PDF/TXT/MD sebagai asas pengetahuan berpandu sebelum penjanaan.",
+      thesisWorkflow: "Aliran Kerja Tesis",
+      thesisWorkflowDesc: "Jana tajuk, struktur, bab, rujukan, semakan, dan eksport dalam satu ruang kerja responsif yang lancar.",
+      stacksLayer: "Lapisan Bukti Stacks",
+      stacksLayerDesc: "Direka untuk bukti penyelidikan masa depan, insentif sBTC, dan integrasi kontrak pintar Clarity di Stacks.",
+      create: "Cipta",
+      dashboard: "Papan Pemuka",
+      about: "Tentang",
+      signIn: "Log Masuk",
+      signOut: "Log Keluar",
+      newThesis: "Tesis Baharu",
+      myLibrary: "Perpustakaan Penyelidikan Saya",
+      manageDrafts: "Urus draf tesis dan kerja penyelidikan yang disimpan.",
+      noSavedFound: "Tiada Tesis Disimpan Ditemui",
+      startGenerating: "Mula jana tesis dan simpan untuk melihatnya di sini dalam perpustakaan peribadi anda.",
+      initiate: "Mulakan Penjanaan",
+      openDraft: "Buka Draf",
+      saveDraft: "Simpan Draf",
+      exportPptx: "Eksport PPTX",
+      exportPdf: "Eksport PDF",
+      regenerate: "Jana Semula Bab",
+      aboutTitle: "Tentang ThesisAI",
+      aboutDesc: "ThesisAI adalah ruang kerja penyelidikan autonomi berasaskan Stacks yang mengubah sumber yang diberikan pengguna kepada draf akademik berstruktur sambil menyediakan produk untuk provenans dokumen yang boleh disahkan pada infrastruktur berasaskan Stacks.",
+      disclaimerTitle: "Penafian & Etika",
+      disclaimerDesc: "Alat ini adalah pembantu AI. AI boleh berhalusinasi atau menghasilkan maklumat yang tidak tepat. Sentiasa sahkan fakta dan sitasi. ThesisAI bertujuan untuk membantu, bukan menggantikan, pemikiran kritis. Gunakan secara bertanggungjawab dan patuhi garis panduan integriti akademik institusi anda.",
+      donationTitle: "Sokong Projek Ini",
+      donationDesc: "Projek ini dibangunkan secara bebas untuk membantu pelajar di seluruh dunia. Jika anda mendapati ia membantu, pertimbangkan untuk menyokong penyelenggaraan dan pembangunan selanjutnya.",
+      languageName: "Bahasa Melayu",
+      saveConfirmation: "Tesis berjaya disimpan!",
+      loginRequirement: "Sila log masuk dahulu untuk menyimpan kemajuan anda.",
+      revertConfirmation: "Adakah anda pasti mahu kembali ke versi ini? Sebarang perubahan yang belum disimpan pada paparan semasa akan hilang.",
+      step1Title: "Asas Pengetahuan",
+      step1Desc: "Muat naik PDF, tampal URL, atau masukkan teks mentah untuk membimbing penyelidikan AI.",
+      addUrl: "Tambah URL",
+      pasteText: "Tampal Teks",
+      configureTitle: "Perhalusi Output",
+      major: "Jurusan Akademik",
+      thesisLevel: "Tahap Tesis",
+      writingStyle: "Gaya Penulisan",
+      citationStyle: "Gaya Sitasi",
+      generateFull: "Jana Tesis Lengkap",
+      processing: "Memproses...",
+      thesisTitle: "Tajuk Tesis (Pilihan)",
+      titlePlaceholder: "Biarkan AI tentukan atau taip sendiri...",
+      generateTitles: "Jana Pilihan Tajuk daripada sumber",
+      antiPlagiarismDesc: "Parafrasa semula jadi untuk mengurangkan skor kesamaan.",
+      language: "Bahasa Sasaran",
+      contentLength: "Panjang Kandungan",
+      fontProfile: "Profil Fon",
+      antiPlagiarism: "Anti-Plagiarisme",
+      ctaBadge: "Sedia Tesis",
+      ctaTitle: "Output bertaraf akademik, provenans penyelidikan on-chain seterusnya.",
+      ctaDesc: "Pelan tindak Stacks: cincang dokumen akhir dengan Clarity, keluarkan lencana pemeriksa, dan tambah insentif berasaskan sBTC untuk penyumbang seiring perkembangan provenans penyelidikan.",
+      ctaButton: "Mula Menulis Sekarang",
+      walletGuideTitle: "Cara Menyambungkan Dompet Anda",
+      walletGuideDesc: "Sambungkan dompet Stacks anda untuk memeriksa baki $THESIS dan mencetak Sijil Tesis anda on-chain.",
+      walletGuideStep1: "Pasang sambungan dompet Leather atau Xverse dalam pelayar anda",
+      walletGuideStep2: "Klik butang \"Connect Stacks\" pada navigasi atas",
+      walletGuideStep3: "Luluskan permintaan sambungan dalam popup dompet anda",
+      walletGuideStep4: "Baki $THESIS anda akan muncul secara automatik",
+      walletGuideMobile: "Pada telefon, buka laman ini dalam pelayar dalam-aplikasi Leather atau Xverse untuk akses dompet.",
+      walletGuideLeather: "Dapatkan Dompet Leather",
+      walletGuideXverse: "Dapatkan Dompet Xverse",
+      walletGuideLoginTitle: "Log Masuk untuk Akses Papan Pemuka Anda",
+      walletGuideLoginDesc: "Log masuk dengan Google untuk menyimpan draf tesis, melihat sejarah penjanaan, dan menguruskan perpustakaan penyelidikan anda di semua peranti.",
+      walletGuideLoginBtn: "Log masuk dengan Google",
+      walletGuideOrHold: "Atau pegang 1,000 token $THESIS",
+      stakeTitle: "Buka Akses Penuh",
+      stakeDesc: "Buka semua ciri ThesisAI dengan memegang 1,000 token $THESIS dalam dompet yang disambungkan.",
+      stakeOption1: "Pegang 1,000 $THESIS",
+      stakeOption1Desc: "Pegang sekurang-kurangnya 1,000 token $THESIS dalam dompet Stacks yang disambungkan untuk membuka semua ciri secara kekal.",
+      stakeCheckBalance: "Semak Baki $THESIS Saya",
+
+      saveUnlimitedDrafts: "Simpan draf tesis tanpa had ke perpustakaan anda",
+      accessGenHistory: "Akses sejarah penjanaan & semakan",
+      syncDevices: "Segerakkan secara automatik di semua peranti",
+      viewCertificates: "Lihat & urus sijil yang dicetak",
+      signedInAsPrefix: "Log masuk sebagai",
+      accessGate: "Pintu Akses",
+      activeNow: "Aktif Sekarang",
+      connectWalletBtn: "Sambungkan Dompet",
+      communityTraction: "Penerimaan Komuniti",
+      researchersGenerating: "Penyelidik sudah mula menjana.",
+      thesesGenerated: "Tesis Dijana",
+      latestBarLive: "bar terkini adalah data on-chain langsung",
+      monthsActive: "Bulan Aktif",
+      exportFormatsLabel: "Format Eksport",
+      revisionsLabel: "Semakan",
+    },
+    ar: {
+      tagline: "وكيل بحث مستقل",
+      heroBadge: "ذكاء أكاديمي مدعوم بـ Stacks",
+      heroTitle: "حوّل مصادر البحث إلى مساحة عمل أطروحة منظمة.",
+      heroDesc: "يجمع ThesisAI بين الذكاء الاصطناعي بسرعة Groq، والكتابة الواعية بالاستشهادات، وأدوات التصدير، وخارطة طريق لطبقة إثبات مؤمّنة بـ Stacks، لتمكين الطلاب من الانتقال من المصادر الخام إلى عمل أكاديمي منظم دون تشويش.",
+      launchStudio: "ابدأ استوديو البحث",
+      connectStacks: "استكشف طبقة Stacks",
+      stacksNote: "مبني مع خارطة طريق أمان بمستوى Stacks: إثبات أصالة البحث القابل للتحقق، وإثبات تجزئة الوثائق، والتحقق المستقبلي على السلسلة — دون تعطيل تسلسل كتابتك.",
+      aiModels: "شبكة نماذج Groq AI",
+      aiModelsDesc: "يوجّه مهام البحث عبر Llama 3.3 70B وQwen3 32B وDeepSeek R1 Distill ونماذج احتياطية سريعة من الخادم.",
+      sourceIngestion: "استيعاب المصادر",
+      sourceIngestionDesc: "أضف عناوين URL، أو ألصق نصًا، أو حمّل وثائق PDF/TXT/MD كقاعدة معرفية موجهة قبل التوليد.",
+      thesisWorkflow: "سير عمل الأطروحة",
+      thesisWorkflowDesc: "أنشئ العناوين والهياكل والفصول والمراجع والتنقيحات والتصديرات في مساحة عمل واحدة سلسة ومتجاوبة.",
+      stacksLayer: "طبقة إثبات Stacks",
+      stacksLayerDesc: "مصممة لإثبات البحث المستقبلي، وحوافز sBTC، وتكامل العقود الذكية Clarity على Stacks.",
+      create: "إنشاء",
+      dashboard: "لوحة التحكم",
+      about: "حول",
+      signIn: "تسجيل الدخول",
+      signOut: "تسجيل الخروج",
+      newThesis: "أطروحة جديدة",
+      myLibrary: "مكتبة بحثي",
+      manageDrafts: "إدارة مسودات الأطروحة وأعمال البحث المحفوظة.",
+      noSavedFound: "لم يتم العثور على أطروحات محفوظة",
+      startGenerating: "ابدأ بإنشاء أطروحة واحفظها لتراها هنا في مكتبتك الشخصية.",
+      initiate: "بدء التوليد",
+      openDraft: "فتح المسودة",
+      saveDraft: "حفظ المسودة",
+      exportPptx: "تصدير PPTX",
+      exportPdf: "تصدير PDF",
+      regenerate: "إعادة إنشاء الفصل",
+      aboutTitle: "حول ThesisAI",
+      aboutDesc: "ThesisAI هي مساحة عمل بحثية مستقلة متوافقة مع Stacks تحوّل المصادر التي يقدمها المستخدم إلى مسودات أكاديمية منظمة، مع تجهيز المنتج لإثبات أصالة الوثائق القابل للتحقق على بنية تحتية مؤمّنة بـ Stacks.",
+      disclaimerTitle: "إخلاء المسؤولية والأخلاقيات",
+      disclaimerDesc: "هذه الأداة مساعد ذكاء اصطناعي. قد يهلوس الذكاء الاصطناعي أو ينتج معلومات غير دقيقة. تحقق دائمًا من الحقائق والاستشهادات. يهدف ThesisAI إلى المساعدة، لا استبدال، التفكير النقدي. استخدمه بمسؤولية واتبع إرشادات النزاهة الأكاديمية في مؤسستك.",
+      donationTitle: "ادعم هذا المشروع",
+      donationDesc: "تم تطوير هذا المشروع بشكل مستقل لمساعدة الطلاب حول العالم. إذا وجدته مفيدًا، فكر في دعم صيانته وتطويره المستمر.",
+      languageName: "العربية",
+      saveConfirmation: "تم حفظ الأطروحة بنجاح!",
+      loginRequirement: "يرجى تسجيل الدخول أولاً لحفظ تقدمك.",
+      revertConfirmation: "هل أنت متأكد من رغبتك في العودة إلى هذا الإصدار؟ ستفقد أي تغييرات غير محفوظة في العرض الحالي.",
+      step1Title: "قاعدة المعرفة",
+      step1Desc: "حمّل ملفات PDF، أو ألصق عناوين URL، أو أدخل نصًا خامًا لتوجيه بحث الذكاء الاصطناعي.",
+      addUrl: "إضافة رابط",
+      pasteText: "لصق نص",
+      configureTitle: "تحسين المخرجات",
+      major: "التخصص الأكاديمي",
+      thesisLevel: "مستوى الأطروحة",
+      writingStyle: "أسلوب الكتابة",
+      citationStyle: "نمط الاستشهاد",
+      generateFull: "إنشاء الأطروحة الكاملة",
+      processing: "جاري المعالجة...",
+      thesisTitle: "عنوان الأطروحة (اختياري)",
+      titlePlaceholder: "اترك الذكاء الاصطناعي يقرر أو اكتب عنوانك الخاص...",
+      generateTitles: "إنشاء خيارات العنوان من المصادر",
+      antiPlagiarismDesc: "إعادة صياغة طبيعية لتقليل درجة التشابه.",
+      language: "اللغة المستهدفة",
+      contentLength: "طول المحتوى",
+      fontProfile: "ملف الخط",
+      antiPlagiarism: "مكافحة الانتحال",
+      ctaBadge: "جاهز للأطروحة",
+      ctaTitle: "مخرجات بمستوى أكاديمي، وإثبات أصالة بحث على السلسلة قادم.",
+      ctaDesc: "خارطة طريق Stacks: تثبيت تجزئات الوثائق النهائية بـ Clarity، وإصدار شارات المراجعين، وإضافة حوافز متوافقة مع sBTC للمساهمين مع تطور إثبات أصالة البحث.",
+      ctaButton: "ابدأ الكتابة الآن",
+      walletGuideTitle: "كيفية ربط محفظتك",
+      walletGuideDesc: "اربط محفظة Stacks الخاصة بك للتحقق من رصيد $THESIS وسك شهادة الأطروحة الخاصة بك على السلسلة.",
+      walletGuideStep1: "ثبّت ملحق محفظة Leather أو Xverse في متصفحك",
+      walletGuideStep2: "انقر على زر \"Connect Stacks\" في شريط التنقل العلوي",
+      walletGuideStep3: "وافق على طلب الاتصال في نافذة محفظتك المنبثقة",
+      walletGuideStep4: "سيظهر رصيد $THESIS الخاص بك تلقائيًا",
+      walletGuideMobile: "على الهاتف، افتح هذا الموقع داخل متصفح Leather أو Xverse المدمج في التطبيق للوصول إلى المحفظة.",
+      walletGuideLeather: "احصل على محفظة Leather",
+      walletGuideXverse: "احصل على محفظة Xverse",
+      walletGuideLoginTitle: "سجّل الدخول للوصول إلى لوحة التحكم",
+      walletGuideLoginDesc: "سجّل الدخول بحساب Google لحفظ مسودات أطروحتك، وعرض سجل الإنشاء، وإدارة مكتبة بحثك عبر جميع الأجهزة.",
+      walletGuideLoginBtn: "تسجيل الدخول بحساب Google",
+      walletGuideOrHold: "أو احتفظ بـ 1,000 رمز $THESIS",
+      stakeTitle: "فتح الوصول الكامل",
+      stakeDesc: "افتح جميع ميزات ThesisAI بالاحتفاظ بـ 1,000 رمز $THESIS في محفظتك المتصلة.",
+      stakeOption1: "احتفظ بـ 1,000 $THESIS",
+      stakeOption1Desc: "احتفظ بما لا يقل عن 1,000 رمز $THESIS في محفظة Stacks المتصلة لفتح جميع الميزات بشكل دائم.",
+      stakeCheckBalance: "تحقق من رصيد $THESIS الخاص بي",
+
+      saveUnlimitedDrafts: "حفظ مسودات أطروحة غير محدودة في مكتبتك",
+      accessGenHistory: "الوصول إلى سجل الإنشاء والمراجعات",
+      syncDevices: "المزامنة التلقائية عبر جميع الأجهزة",
+      viewCertificates: "عرض وإدارة الشهادات المسكوكة",
+      signedInAsPrefix: "تم تسجيل الدخول كـ",
+      accessGate: "بوابة الوصول",
+      activeNow: "نشط الآن",
+      connectWalletBtn: "ربط المحفظة",
+      communityTraction: "تفاعل المجتمع",
+      researchersGenerating: "الباحثون يقومون بالإنشاء بالفعل.",
+      thesesGenerated: "الأطروحات المُنشأة",
+      latestBarLive: "الشريط الأخير هو بيانات مباشرة على السلسلة",
+      monthsActive: "شهور النشاط",
+      exportFormatsLabel: "صيغ التصدير",
+      revisionsLabel: "المراجعات",
+    },
+    es: {
+      tagline: "Agente de Investigación Autónomo",
+      heroBadge: "Inteligencia académica impulsada por Stacks",
+      heroTitle: "Convierte fuentes de investigación en un espacio de trabajo de tesis pulido.",
+      heroDesc: "ThesisAI combina IA con la velocidad de Groq, redacción consciente de citas, herramientas de exportación y una hoja de ruta de capa de prueba asegurada por Stacks para que los estudiantes pasen de fuentes en bruto a trabajo académico estructurado sin perderse.",
+      launchStudio: "Iniciar Estudio de Investigación",
+      connectStacks: "Explorar la Capa Stacks",
+      stacksNote: "Construido con una hoja de ruta de seguridad de nivel Stacks: procedencia de investigación verificable, prueba de hash de documentos y validación futura en cadena, sin interrumpir tu flujo de escritura.",
+      aiModels: "Red de Modelos de IA Groq",
+      aiModelsDesc: "Dirige tareas de investigación a través de Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill y modelos de respaldo rápido desde el servidor.",
+      sourceIngestion: "Ingesta de Fuentes",
+      sourceIngestionDesc: "Añade URLs, pega texto o sube documentos PDF/TXT/MD como base de conocimiento guiada antes de la generación.",
+      thesisWorkflow: "Flujo de Trabajo de Tesis",
+      thesisWorkflowDesc: "Genera títulos, estructuras, capítulos, referencias, revisiones y exportaciones en un espacio de trabajo fluido y responsivo.",
+      stacksLayer: "Capa de Prueba Stacks",
+      stacksLayerDesc: "Diseñado para prueba de investigación futura, incentivos sBTC e integración de contratos inteligentes Clarity en Stacks.",
+      create: "Crear",
+      dashboard: "Panel",
+      about: "Acerca de",
+      signIn: "Iniciar Sesión",
+      signOut: "Cerrar Sesión",
+      newThesis: "Nueva Tesis",
+      myLibrary: "Mi Biblioteca de Investigación",
+      manageDrafts: "Gestiona tus borradores de tesis guardados y trabajo de investigación.",
+      noSavedFound: "No se Encontraron Tesis Guardadas",
+      startGenerating: "Comienza a generar una tesis y guárdala para verla aquí en tu biblioteca personal.",
+      initiate: "Iniciar Generación",
+      openDraft: "Abrir Borrador",
+      saveDraft: "Guardar Borrador",
+      exportPptx: "Exportar PPTX",
+      exportPdf: "Exportar PDF",
+      regenerate: "Regenerar Capítulo",
+      aboutTitle: "Acerca de ThesisAI",
+      aboutDesc: "ThesisAI es un espacio de trabajo de investigación autónomo alineado con Stacks que convierte las fuentes proporcionadas por el usuario en borradores académicos estructurados, mientras prepara el producto para la procedencia de documentos verificable en infraestructura asegurada por Stacks.",
+      disclaimerTitle: "Descargo de Responsabilidad y Ética",
+      disclaimerDesc: "Esta herramienta es un asistente de IA. La IA puede alucinar o producir información inexacta. Siempre verifica los hechos y las citas. ThesisAI está destinado a asistir, no reemplazar, el pensamiento crítico. Úsalo de manera responsable y cumple con las pautas de integridad académica de tu institución.",
+      donationTitle: "Apoya el Proyecto",
+      donationDesc: "Este proyecto se desarrolla de forma independiente para ayudar a estudiantes en todo el mundo. Si te resulta útil, considera apoyar su mantenimiento y desarrollo continuo.",
+      languageName: "Español",
+      saveConfirmation: "¡Tesis guardada con éxito!",
+      loginRequirement: "Por favor inicia sesión primero para guardar tu progreso.",
+      revertConfirmation: "¿Estás seguro de que quieres revertir a esta versión? Se perderán los cambios no guardados en la vista actual.",
+      step1Title: "Base de Conocimiento",
+      step1Desc: "Sube PDFs, pega URLs o ingresa texto en bruto para guiar la investigación de la IA.",
+      addUrl: "Añadir URL",
+      pasteText: "Pegar Texto",
+      configureTitle: "Refinar Salida",
+      major: "Especialidad Académica",
+      thesisLevel: "Nivel de Tesis",
+      writingStyle: "Estilo de Escritura",
+      citationStyle: "Estilo de Cita",
+      generateFull: "Generar Tesis Completa",
+      processing: "Procesando...",
+      thesisTitle: "Título de la Tesis (Opcional)",
+      titlePlaceholder: "Deja que la IA decida o escribe el tuyo...",
+      generateTitles: "Generar Opciones de Título a partir de fuentes",
+      antiPlagiarismDesc: "Parafrasea de forma natural para reducir la puntuación de similitud.",
+      language: "Idioma de Destino",
+      contentLength: "Longitud del Contenido",
+      fontProfile: "Perfil de Fuente",
+      antiPlagiarism: "Anti-Plagio",
+      ctaBadge: "Listo para Tesis",
+      ctaTitle: "Salida de nivel académico, procedencia de investigación en cadena a continuación.",
+      ctaDesc: "Hoja de ruta Stacks: anclar hashes de documentos finales con Clarity, emitir insignias de revisores y añadir incentivos alineados con sBTC para colaboradores a medida que evoluciona la procedencia de investigación.",
+      ctaButton: "Comenzar a Escribir Ahora",
+      walletGuideTitle: "Cómo Conectar tu Billetera",
+      walletGuideDesc: "Conecta tu billetera Stacks para verificar tu saldo $THESIS y acuñar tu Certificado de Tesis en cadena.",
+      walletGuideStep1: "Instala la extensión de billetera Leather o Xverse en tu navegador",
+      walletGuideStep2: "Haz clic en el botón \"Connect Stacks\" en la navegación superior",
+      walletGuideStep3: "Aprueba la solicitud de conexión en la ventana emergente de tu billetera",
+      walletGuideStep4: "Tu saldo $THESIS aparecerá automáticamente",
+      walletGuideMobile: "En el móvil, abre este sitio dentro del navegador integrado de Leather o Xverse para acceder a la billetera.",
+      walletGuideLeather: "Obtener Billetera Leather",
+      walletGuideXverse: "Obtener Billetera Xverse",
+      walletGuideLoginTitle: "Inicia Sesión para Acceder a tu Panel",
+      walletGuideLoginDesc: "Inicia sesión con Google para guardar tus borradores de tesis, ver el historial de generación y gestionar tu biblioteca de investigación en todos los dispositivos.",
+      walletGuideLoginBtn: "Iniciar sesión con Google",
+      walletGuideOrHold: "O mantén 1,000 tokens $THESIS",
+      stakeTitle: "Desbloquear Acceso Completo",
+      stakeDesc: "Desbloquea todas las funciones de ThesisAI manteniendo 1,000 tokens $THESIS en tu billetera conectada.",
+      stakeOption1: "Mantener 1,000 $THESIS",
+      stakeOption1Desc: "Mantén al menos 1,000 tokens $THESIS en tu billetera Stacks conectada para desbloquear todas las funciones de forma permanente.",
+      stakeCheckBalance: "Verificar Mi Saldo $THESIS",
+
+      saveUnlimitedDrafts: "Guarda borradores de tesis ilimitados en tu biblioteca",
+      accessGenHistory: "Accede al historial de generación y revisiones",
+      syncDevices: "Sincroniza automáticamente entre dispositivos",
+      viewCertificates: "Ver y gestionar certificados acuñados",
+      signedInAsPrefix: "Sesión iniciada como",
+      accessGate: "Puerta de Acceso",
+      activeNow: "Activo Ahora",
+      connectWalletBtn: "Conectar Billetera",
+      communityTraction: "Tracción de la Comunidad",
+      researchersGenerating: "Los investigadores ya están generando.",
+      thesesGenerated: "Tesis Generadas",
+      latestBarLive: "la última barra son datos en vivo en cadena",
+      monthsActive: "Meses Activos",
+      exportFormatsLabel: "Formatos de Exportación",
+      revisionsLabel: "Revisiones",
+    },
+    pt: {
+      tagline: "Agente de Pesquisa Autônomo",
+      heroBadge: "Inteligência acadêmica com tecnologia Stacks",
+      heroTitle: "Transforme fontes de pesquisa em um espaço de trabalho de tese refinado.",
+      heroDesc: "O ThesisAI combina IA com a velocidade do Groq, redação consciente de citações, ferramentas de exportação e um roteiro de camada de prova protegida pela Stacks para que os estudantes avancem de fontes brutas para trabalho acadêmico estruturado sem se perder.",
+      launchStudio: "Iniciar Estúdio de Pesquisa",
+      connectStacks: "Explorar a Camada Stacks",
+      stacksNote: "Construído com um roteiro de segurança de nível Stacks: proveniência de pesquisa verificável, prova de hash de documentos e validação futura on-chain — sem interromper seu fluxo de escrita.",
+      aiModels: "Malha de Modelos de IA Groq",
+      aiModelsDesc: "Direciona tarefas de pesquisa entre Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill e modelos de backup rápido do servidor.",
+      sourceIngestion: "Ingestão de Fontes",
+      sourceIngestionDesc: "Adicione URLs, cole texto ou envie documentos PDF/TXT/MD como base de conhecimento guiada antes da geração.",
+      thesisWorkflow: "Fluxo de Trabalho da Tese",
+      thesisWorkflowDesc: "Gere títulos, estruturas, capítulos, referências, revisões e exportações em um espaço de trabalho fluido e responsivo.",
+      stacksLayer: "Camada de Prova Stacks",
+      stacksLayerDesc: "Projetado para prova de pesquisa futura, incentivos sBTC e integração de contratos inteligentes Clarity na Stacks.",
+      create: "Criar",
+      dashboard: "Painel",
+      about: "Sobre",
+      signIn: "Entrar",
+      signOut: "Sair",
+      newThesis: "Nova Tese",
+      myLibrary: "Minha Biblioteca de Pesquisa",
+      manageDrafts: "Gerencie seus rascunhos de tese salvos e trabalho de pesquisa.",
+      noSavedFound: "Nenhuma Tese Salva Encontrada",
+      startGenerating: "Comece a gerar uma tese e salve-a para vê-la aqui em sua biblioteca pessoal.",
+      initiate: "Iniciar Geração",
+      openDraft: "Abrir Rascunho",
+      saveDraft: "Salvar Rascunho",
+      exportPptx: "Exportar PPTX",
+      exportPdf: "Exportar PDF",
+      regenerate: "Regenerar Capítulo",
+      aboutTitle: "Sobre o ThesisAI",
+      aboutDesc: "O ThesisAI é um espaço de trabalho de pesquisa autônomo alinhado com a Stacks que transforma fontes fornecidas pelo usuário em rascunhos acadêmicos estruturados, ao mesmo tempo que prepara o produto para proveniência de documentos verificável em infraestrutura protegida pela Stacks.",
+      disclaimerTitle: "Aviso Legal e Ética",
+      disclaimerDesc: "Esta ferramenta é um assistente de IA. A IA pode alucinar ou produzir informações inexatas. Sempre verifique fatos e citações. O ThesisAI destina-se a auxiliar, não substituir, o pensamento crítico. Use com responsabilidade e siga as diretrizes de integridade acadêmica de sua instituição.",
+      donationTitle: "Apoie o Projeto",
+      donationDesc: "Este projeto é desenvolvido de forma independente para ajudar estudantes em todo o mundo. Se você o considera útil, considere apoiar sua manutenção e desenvolvimento contínuo.",
+      languageName: "Português",
+      saveConfirmation: "Tese salva com sucesso!",
+      loginRequirement: "Por favor, entre primeiro para salvar seu progresso.",
+      revertConfirmation: "Tem certeza de que deseja reverter para esta versão? Quaisquer alterações não salvas na exibição atual serão perdidas.",
+      step1Title: "Base de Conhecimento",
+      step1Desc: "Envie PDFs, cole URLs ou insira texto bruto para guiar a pesquisa da IA.",
+      addUrl: "Adicionar URL",
+      pasteText: "Colar Texto",
+      configureTitle: "Refinar Saída",
+      major: "Área Acadêmica",
+      thesisLevel: "Nível da Tese",
+      writingStyle: "Estilo de Escrita",
+      citationStyle: "Estilo de Citação",
+      generateFull: "Gerar Tese Completa",
+      processing: "Processando...",
+      thesisTitle: "Título da Tese (Opcional)",
+      titlePlaceholder: "Deixe a IA decidir ou digite o seu próprio...",
+      generateTitles: "Gerar Opções de Título a partir de fontes",
+      antiPlagiarismDesc: "Reformula naturalmente para reduzir a pontuação de similaridade.",
+      language: "Idioma de Destino",
+      contentLength: "Tamanho do Conteúdo",
+      fontProfile: "Perfil de Fonte",
+      antiPlagiarism: "Anti-Plágio",
+      ctaBadge: "Pronto para Tese",
+      ctaTitle: "Saída de nível acadêmico, proveniência de pesquisa on-chain em seguida.",
+      ctaDesc: "Roteiro Stacks: ancorar hashes de documentos finais com Clarity, emitir distintivos de revisores e adicionar incentivos alinhados com sBTC para colaboradores conforme a proveniência da pesquisa evolui.",
+      ctaButton: "Comece a Escrever Agora",
+      walletGuideTitle: "Como Conectar sua Carteira",
+      walletGuideDesc: "Conecte sua carteira Stacks para verificar seu saldo $THESIS e cunhar seu Certificado de Tese on-chain.",
+      walletGuideStep1: "Instale a extensão de carteira Leather ou Xverse em seu navegador",
+      walletGuideStep2: "Clique no botão \"Connect Stacks\" na navegação superior",
+      walletGuideStep3: "Aprove a solicitação de conexão no popup da sua carteira",
+      walletGuideStep4: "Seu saldo $THESIS aparecerá automaticamente",
+      walletGuideMobile: "No celular, abra este site dentro do navegador integrado do Leather ou Xverse para acesso à carteira.",
+      walletGuideLeather: "Obter Carteira Leather",
+      walletGuideXverse: "Obter Carteira Xverse",
+      walletGuideLoginTitle: "Entre para Acessar seu Painel",
+      walletGuideLoginDesc: "Entre com o Google para salvar seus rascunhos de tese, ver o histórico de geração e gerenciar sua biblioteca de pesquisa em todos os dispositivos.",
+      walletGuideLoginBtn: "Entrar com o Google",
+      walletGuideOrHold: "Ou mantenha 1.000 tokens $THESIS",
+      stakeTitle: "Desbloquear Acesso Completo",
+      stakeDesc: "Desbloqueie todos os recursos do ThesisAI mantendo 1.000 tokens $THESIS em sua carteira conectada.",
+      stakeOption1: "Manter 1.000 $THESIS",
+      stakeOption1Desc: "Mantenha pelo menos 1.000 tokens $THESIS em sua carteira Stacks conectada para desbloquear todos os recursos permanentemente.",
+      stakeCheckBalance: "Verificar Meu Saldo $THESIS",
+
+      saveUnlimitedDrafts: "Salve rascunhos de tese ilimitados em sua biblioteca",
+      accessGenHistory: "Acesse o histórico de geração e revisões",
+      syncDevices: "Sincronize automaticamente entre dispositivos",
+      viewCertificates: "Visualizar e gerenciar certificados cunhados",
+      signedInAsPrefix: "Conectado como",
+      accessGate: "Portão de Acesso",
+      activeNow: "Ativo Agora",
+      connectWalletBtn: "Conectar Carteira",
+      communityTraction: "Tração da Comunidade",
+      researchersGenerating: "Pesquisadores já estão gerando.",
+      thesesGenerated: "Teses Geradas",
+      latestBarLive: "a barra mais recente são dados em tempo real on-chain",
+      monthsActive: "Meses Ativos",
+      exportFormatsLabel: "Formatos de Exportação",
+      revisionsLabel: "Revisões",
+    },
+    ru: {
+      tagline: "Автономный исследовательский агент",
+      heroBadge: "Академический интеллект на базе Stacks",
+      heroTitle: "Превратите источники исследования в продуманное рабочее пространство для диссертации.",
+      heroDesc: "ThesisAI объединяет ИИ со скоростью Groq, написание с учётом цитирования, инструменты экспорта и план развития слоя доказательств на базе Stacks, чтобы студенты могли перейти от необработанных источников к структурированной академической работе без путаницы.",
+      launchStudio: "Запустить Исследовательскую Студию",
+      connectStacks: "Исследовать Слой Stacks",
+      stacksNote: "Создано с учётом плана безопасности уровня Stacks: проверяемое происхождение исследования, доказательство хеша документа и будущая проверка на блокчейне — без нарушения вашего процесса написания.",
+      aiModels: "Сеть Моделей ИИ Groq",
+      aiModelsDesc: "Направляет исследовательские задачи через Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill и быстрые резервные модели с сервера.",
+      sourceIngestion: "Загрузка Источников",
+      sourceIngestionDesc: "Добавляйте URL-адреса, вставляйте текст или загружайте документы PDF/TXT/MD как управляемую базу знаний перед генерацией.",
+      thesisWorkflow: "Рабочий Процесс Диссертации",
+      thesisWorkflowDesc: "Создавайте заголовки, структуры, главы, ссылки, исправления и экспорт в одном плавном адаптивном рабочем пространстве.",
+      stacksLayer: "Слой Доказательств Stacks",
+      stacksLayerDesc: "Разработан для будущего доказательства исследований, стимулов sBTC и интеграции смарт-контрактов Clarity на Stacks.",
+      create: "Создать",
+      dashboard: "Панель управления",
+      about: "О нас",
+      signIn: "Войти",
+      signOut: "Выйти",
+      newThesis: "Новая Диссертация",
+      myLibrary: "Моя Исследовательская Библиотека",
+      manageDrafts: "Управляйте сохранёнными черновиками диссертации и исследовательской работой.",
+      noSavedFound: "Сохранённых Диссертаций Не Найдено",
+      startGenerating: "Начните создавать диссертацию и сохраните её, чтобы увидеть здесь, в своей личной библиотеке.",
+      initiate: "Начать Генерацию",
+      openDraft: "Открыть Черновик",
+      saveDraft: "Сохранить Черновик",
+      exportPptx: "Экспорт PPTX",
+      exportPdf: "Экспорт PDF",
+      regenerate: "Перегенерировать Главу",
+      aboutTitle: "О ThesisAI",
+      aboutDesc: "ThesisAI — это автономное исследовательское рабочее пространство, согласованное с Stacks, которое превращает предоставленные пользователем источники в структурированные академические черновики, одновременно готовя продукт для проверяемого происхождения документов на инфраструктуре, защищённой Stacks.",
+      disclaimerTitle: "Отказ от Ответственности и Этика",
+      disclaimerDesc: "Этот инструмент является помощником на основе ИИ. ИИ может галлюцинировать или выдавать неточную информацию. Всегда проверяйте факты и цитаты. ThesisAI предназначен для помощи, а не замены критического мышления. Используйте ответственно и соблюдайте принципы академической честности вашего учебного заведения.",
+      donationTitle: "Поддержите Проект",
+      donationDesc: "Этот проект разрабатывается независимо, чтобы помочь студентам по всему миру. Если он оказался полезен, рассмотрите возможность поддержать его обслуживание и дальнейшую разработку.",
+      languageName: "Русский",
+      saveConfirmation: "Диссертация успешно сохранена!",
+      loginRequirement: "Пожалуйста, сначала войдите, чтобы сохранить свой прогресс.",
+      revertConfirmation: "Вы уверены, что хотите вернуться к этой версии? Все несохранённые изменения в текущем виде будут потеряны.",
+      step1Title: "База Знаний",
+      step1Desc: "Загрузите PDF, вставьте URL-адреса или введите необработанный текст, чтобы направить исследование ИИ.",
+      addUrl: "Добавить URL",
+      pasteText: "Вставить Текст",
+      configureTitle: "Уточнить Вывод",
+      major: "Академическая Специализация",
+      thesisLevel: "Уровень Диссертации",
+      writingStyle: "Стиль Письма",
+      citationStyle: "Стиль Цитирования",
+      generateFull: "Создать Полную Диссертацию",
+      processing: "Обработка...",
+      thesisTitle: "Название Диссертации (Необязательно)",
+      titlePlaceholder: "Позвольте ИИ решить или введите своё...",
+      generateTitles: "Создать Варианты Заголовков из источников",
+      antiPlagiarismDesc: "Естественно перефразирует для снижения показателя сходства.",
+      language: "Целевой Язык",
+      contentLength: "Длина Контента",
+      fontProfile: "Профиль Шрифта",
+      antiPlagiarism: "Антиплагиат",
+      ctaBadge: "Готов к Диссертации",
+      ctaTitle: "Вывод академического уровня, далее — происхождение исследования на блокчейне.",
+      ctaDesc: "План развития Stacks: закрепление хешей итоговых документов с помощью Clarity, выдача значков рецензентам и добавление стимулов, согласованных с sBTC, для участников по мере развития происхождения исследований.",
+      ctaButton: "Начать Писать Сейчас",
+      walletGuideTitle: "Как Подключить Ваш Кошелёк",
+      walletGuideDesc: "Подключите свой кошелёк Stacks, чтобы проверить баланс $THESIS и выпустить сертификат диссертации на блокчейне.",
+      walletGuideStep1: "Установите расширение кошелька Leather или Xverse в своём браузере",
+      walletGuideStep2: "Нажмите кнопку \"Connect Stacks\" в верхней навигации",
+      walletGuideStep3: "Подтвердите запрос на подключение во всплывающем окне вашего кошелька",
+      walletGuideStep4: "Ваш баланс $THESIS появится автоматически",
+      walletGuideMobile: "На мобильном устройстве откройте этот сайт во встроенном браузере Leather или Xverse для доступа к кошельку.",
+      walletGuideLeather: "Получить Кошелёк Leather",
+      walletGuideXverse: "Получить Кошелёк Xverse",
+      walletGuideLoginTitle: "Войдите для Доступа к Вашей Панели",
+      walletGuideLoginDesc: "Войдите через Google, чтобы сохранять черновики диссертации, просматривать историю генерации и управлять своей исследовательской библиотекой на всех устройствах.",
+      walletGuideLoginBtn: "Войти через Google",
+      walletGuideOrHold: "Или держите 1000 токенов $THESIS",
+      stakeTitle: "Разблокировать Полный Доступ",
+      stakeDesc: "Разблокируйте все функции ThesisAI, удерживая 1000 токенов $THESIS в подключённом кошельке.",
+      stakeOption1: "Держать 1000 $THESIS",
+      stakeOption1Desc: "Держите не менее 1000 токенов $THESIS в подключённом кошельке Stacks, чтобы навсегда разблокировать все функции.",
+      stakeCheckBalance: "Проверить Мой Баланс $THESIS",
+
+      saveUnlimitedDrafts: "Сохраняйте неограниченное количество черновиков диссертации в своей библиотеке",
+      accessGenHistory: "Доступ к истории генерации и исправлениям",
+      syncDevices: "Автоматическая синхронизация между устройствами",
+      viewCertificates: "Просмотр и управление выпущенными сертификатами",
+      signedInAsPrefix: "Вы вошли как",
+      accessGate: "Шлюз Доступа",
+      activeNow: "Активно Сейчас",
+      connectWalletBtn: "Подключить Кошелёк",
+      communityTraction: "Активность Сообщества",
+      researchersGenerating: "Исследователи уже создают работы.",
+      thesesGenerated: "Создано Диссертаций",
+      latestBarLive: "последний столбец — это живые данные блокчейна",
+      monthsActive: "Месяцев Активности",
+      exportFormatsLabel: "Форматы Экспорта",
+      revisionsLabel: "Исправления",
+    },
+    fr: {
+      tagline: "Agent de Recherche Autonome",
+      heroBadge: "Intelligence académique alimentée par Stacks",
+      heroTitle: "Transformez les sources de recherche en un espace de travail de thèse soigné.",
+      heroDesc: "ThesisAI combine une IA à la vitesse de Groq, une rédaction consciente des citations, des outils d'exportation et une feuille de route de couche de preuve sécurisée par Stacks afin que les étudiants puissent passer de sources brutes à un travail académique structuré sans se perdre.",
+      launchStudio: "Lancer le Studio de Recherche",
+      connectStacks: "Explorer la Couche Stacks",
+      stacksNote: "Construit avec une feuille de route de sécurité de niveau Stacks : provenance de recherche vérifiable, preuve de hachage de documents et validation future sur la chaîne — sans perturber votre flux d'écriture.",
+      aiModels: "Réseau de Modèles IA Groq",
+      aiModelsDesc: "Dirige les tâches de recherche entre Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill et des modèles de secours rapides depuis le serveur.",
+      sourceIngestion: "Ingestion de Sources",
+      sourceIngestionDesc: "Ajoutez des URLs, collez du texte ou téléchargez des documents PDF/TXT/MD comme base de connaissances guidée avant la génération.",
+      thesisWorkflow: "Flux de Travail de Thèse",
+      thesisWorkflowDesc: "Générez des titres, des structures, des chapitres, des références, des révisions et des exportations dans un espace de travail fluide et réactif.",
+      stacksLayer: "Couche de Preuve Stacks",
+      stacksLayerDesc: "Conçu pour la preuve de recherche future, les incitations sBTC et l'intégration de contrats intelligents Clarity sur Stacks.",
+      create: "Créer",
+      dashboard: "Tableau de Bord",
+      about: "À Propos",
+      signIn: "Se Connecter",
+      signOut: "Se Déconnecter",
+      newThesis: "Nouvelle Thèse",
+      myLibrary: "Ma Bibliothèque de Recherche",
+      manageDrafts: "Gérez vos brouillons de thèse enregistrés et votre travail de recherche.",
+      noSavedFound: "Aucune Thèse Enregistrée Trouvée",
+      startGenerating: "Commencez à générer une thèse et enregistrez-la pour la voir ici dans votre bibliothèque personnelle.",
+      initiate: "Démarrer la Génération",
+      openDraft: "Ouvrir le Brouillon",
+      saveDraft: "Enregistrer le Brouillon",
+      exportPptx: "Exporter en PPTX",
+      exportPdf: "Exporter en PDF",
+      regenerate: "Régénérer le Chapitre",
+      aboutTitle: "À Propos de ThesisAI",
+      aboutDesc: "ThesisAI est un espace de travail de recherche autonome aligné sur Stacks qui transforme les sources fournies par l'utilisateur en brouillons académiques structurés, tout en préparant le produit pour une provenance de documents vérifiable sur une infrastructure sécurisée par Stacks.",
+      disclaimerTitle: "Avertissement et Éthique",
+      disclaimerDesc: "Cet outil est un assistant IA. L'IA peut halluciner ou produire des informations inexactes. Vérifiez toujours les faits et les citations. ThesisAI est destiné à aider, non à remplacer, la pensée critique. Utilisez-le de manière responsable et respectez les directives d'intégrité académique de votre établissement.",
+      donationTitle: "Soutenez le Projet",
+      donationDesc: "Ce projet est développé de manière indépendante pour aider les étudiants du monde entier. Si vous le trouvez utile, envisagez de soutenir sa maintenance et son développement continu.",
+      languageName: "Français",
+      saveConfirmation: "Thèse enregistrée avec succès !",
+      loginRequirement: "Veuillez vous connecter d'abord pour enregistrer votre progression.",
+      revertConfirmation: "Êtes-vous sûr de vouloir revenir à cette version ? Toutes les modifications non enregistrées dans la vue actuelle seront perdues.",
+      step1Title: "Base de Connaissances",
+      step1Desc: "Téléchargez des PDF, collez des URLs ou saisissez du texte brut pour guider la recherche de l'IA.",
+      addUrl: "Ajouter une URL",
+      pasteText: "Coller du Texte",
+      configureTitle: "Affiner la Sortie",
+      major: "Spécialité Académique",
+      thesisLevel: "Niveau de Thèse",
+      writingStyle: "Style d'Écriture",
+      citationStyle: "Style de Citation",
+      generateFull: "Générer la Thèse Complète",
+      processing: "Traitement en cours...",
+      thesisTitle: "Titre de la Thèse (Optionnel)",
+      titlePlaceholder: "Laissez l'IA décider ou tapez le vôtre...",
+      generateTitles: "Générer des Options de Titre à partir des sources",
+      antiPlagiarismDesc: "Reformule naturellement pour réduire le score de similarité.",
+      language: "Langue Cible",
+      contentLength: "Longueur du Contenu",
+      fontProfile: "Profil de Police",
+      antiPlagiarism: "Anti-Plagiat",
+      ctaBadge: "Prêt pour la Thèse",
+      ctaTitle: "Sortie de niveau académique, provenance de recherche sur la chaîne à venir.",
+      ctaDesc: "Feuille de route Stacks : ancrer les hachages de documents finaux avec Clarity, délivrer des badges de réviseurs et ajouter des incitations alignées sur sBTC pour les contributeurs à mesure que la provenance de la recherche évolue.",
+      ctaButton: "Commencer à Écrire Maintenant",
+      walletGuideTitle: "Comment Connecter Votre Portefeuille",
+      walletGuideDesc: "Connectez votre portefeuille Stacks pour vérifier votre solde $THESIS et frapper votre Certificat de Thèse sur la chaîne.",
+      walletGuideStep1: "Installez l'extension de portefeuille Leather ou Xverse dans votre navigateur",
+      walletGuideStep2: "Cliquez sur le bouton \"Connect Stacks\" dans la navigation supérieure",
+      walletGuideStep3: "Approuvez la demande de connexion dans la fenêtre contextuelle de votre portefeuille",
+      walletGuideStep4: "Votre solde $THESIS apparaîtra automatiquement",
+      walletGuideMobile: "Sur mobile, ouvrez ce site dans le navigateur intégré de Leather ou Xverse pour accéder au portefeuille.",
+      walletGuideLeather: "Obtenir le Portefeuille Leather",
+      walletGuideXverse: "Obtenir le Portefeuille Xverse",
+      walletGuideLoginTitle: "Connectez-vous pour Accéder à Votre Tableau de Bord",
+      walletGuideLoginDesc: "Connectez-vous avec Google pour enregistrer vos brouillons de thèse, consulter l'historique de génération et gérer votre bibliothèque de recherche sur tous les appareils.",
+      walletGuideLoginBtn: "Se connecter avec Google",
+      walletGuideOrHold: "Ou détenez 1 000 jetons $THESIS",
+      stakeTitle: "Débloquer l'Accès Complet",
+      stakeDesc: "Débloquez toutes les fonctionnalités de ThesisAI en détenant 1 000 jetons $THESIS dans votre portefeuille connecté.",
+      stakeOption1: "Détenir 1 000 $THESIS",
+      stakeOption1Desc: "Détenez au moins 1 000 jetons $THESIS dans votre portefeuille Stacks connecté pour débloquer définitivement toutes les fonctionnalités.",
+      stakeCheckBalance: "Vérifier Mon Solde $THESIS",
+
+      saveUnlimitedDrafts: "Enregistrez un nombre illimité de brouillons de thèse dans votre bibliothèque",
+      accessGenHistory: "Accédez à l'historique de génération et aux révisions",
+      syncDevices: "Synchronisation automatique entre les appareils",
+      viewCertificates: "Voir et gérer les certificats frappés",
+      signedInAsPrefix: "Connecté en tant que",
+      accessGate: "Porte d'Accès",
+      activeNow: "Actif Maintenant",
+      connectWalletBtn: "Connecter le Portefeuille",
+      communityTraction: "Traction de la Communauté",
+      researchersGenerating: "Les chercheurs génèrent déjà du contenu.",
+      thesesGenerated: "Thèses Générées",
+      latestBarLive: "la dernière barre est constituée de données en direct sur la chaîne",
+      monthsActive: "Mois Actifs",
+      exportFormatsLabel: "Formats d'Exportation",
+      revisionsLabel: "Révisions",
+    },
+    vi: {
+      tagline: "Tác Nhân Nghiên Cứu Tự Động",
+      heroBadge: "Trí tuệ học thuật được hỗ trợ bởi Stacks",
+      heroTitle: "Biến nguồn nghiên cứu thành không gian làm việc luận văn hoàn chỉnh.",
+      heroDesc: "ThesisAI kết hợp AI với tốc độ Groq, viết bài có nhận thức về trích dẫn, công cụ xuất file, và lộ trình lớp bằng chứng được bảo mật bởi Stacks để sinh viên có thể chuyển từ nguồn thô sang công trình học thuật có cấu trúc mà không bị lạc lối.",
+      launchStudio: "Khởi Động Studio Nghiên Cứu",
+      connectStacks: "Khám Phá Lớp Stacks",
+      stacksNote: "Được xây dựng với lộ trình an ninh đạt chuẩn Stacks: nguồn gốc nghiên cứu có thể xác minh, chứng minh hash tài liệu, và xác thực trên chuỗi trong tương lai — không làm gián đoạn luồng viết của bạn.",
+      aiModels: "Mạng Lưới Mô Hình AI Groq",
+      aiModelsDesc: "Định tuyến các tác vụ nghiên cứu qua Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, và các mô hình dự phòng nhanh từ máy chủ.",
+      sourceIngestion: "Nạp Nguồn Dữ Liệu",
+      sourceIngestionDesc: "Thêm URL, dán văn bản, hoặc tải lên tài liệu PDF/TXT/MD làm cơ sở kiến thức có hướng dẫn trước khi tạo nội dung.",
+      thesisWorkflow: "Quy Trình Luận Văn",
+      thesisWorkflowDesc: "Tạo tiêu đề, cấu trúc, chương, tài liệu tham khảo, sửa đổi, và xuất file trong một không gian làm việc mượt mà, đáp ứng tốt.",
+      stacksLayer: "Lớp Bằng Chứng Stacks",
+      stacksLayerDesc: "Được thiết kế cho bằng chứng nghiên cứu trong tương lai, ưu đãi sBTC, và tích hợp hợp đồng thông minh Clarity trên Stacks.",
+      create: "Tạo Mới",
+      dashboard: "Bảng Điều Khiển",
+      about: "Giới Thiệu",
+      signIn: "Đăng Nhập",
+      signOut: "Đăng Xuất",
+      newThesis: "Luận Văn Mới",
+      myLibrary: "Thư Viện Nghiên Cứu Của Tôi",
+      manageDrafts: "Quản lý bản nháp luận văn và công trình nghiên cứu đã lưu của bạn.",
+      noSavedFound: "Không Tìm Thấy Luận Văn Đã Lưu",
+      startGenerating: "Bắt đầu tạo một luận văn và lưu lại để xem ở đây trong thư viện cá nhân của bạn.",
+      initiate: "Bắt Đầu Tạo",
+      openDraft: "Mở Bản Nháp",
+      saveDraft: "Lưu Bản Nháp",
+      exportPptx: "Xuất PPTX",
+      exportPdf: "Xuất PDF",
+      regenerate: "Tạo Lại Chương",
+      aboutTitle: "Giới Thiệu Về ThesisAI",
+      aboutDesc: "ThesisAI là không gian làm việc nghiên cứu tự động phù hợp với Stacks, biến nguồn dữ liệu do người dùng cung cấp thành bản nháp học thuật có cấu trúc, đồng thời chuẩn bị sản phẩm cho nguồn gốc tài liệu có thể xác minh trên hạ tầng được bảo mật bởi Stacks.",
+      disclaimerTitle: "Tuyên Bố Miễn Trừ & Đạo Đức",
+      disclaimerDesc: "Công cụ này là trợ lý AI. AI có thể tạo ra thông tin ảo giác hoặc không chính xác. Luôn kiểm tra lại sự thật và trích dẫn. ThesisAI nhằm hỗ trợ, không thay thế, suy nghĩ phản biện. Hãy sử dụng có trách nhiệm và tuân theo các nguyên tắc liêm chính học thuật của cơ sở giáo dục của bạn.",
+      donationTitle: "Hỗ Trợ Dự Án Này",
+      donationDesc: "Dự án này được phát triển độc lập để giúp sinh viên trên toàn thế giới. Nếu bạn thấy hữu ích, hãy xem xét hỗ trợ việc duy trì và phát triển thêm.",
+      languageName: "Tiếng Việt",
+      saveConfirmation: "Đã lưu luận văn thành công!",
+      loginRequirement: "Vui lòng đăng nhập trước để lưu tiến trình của bạn.",
+      revertConfirmation: "Bạn có chắc muốn quay lại phiên bản này không? Mọi thay đổi chưa lưu trong chế độ xem hiện tại sẽ bị mất.",
+      step1Title: "Cơ Sở Kiến Thức",
+      step1Desc: "Tải lên PDF, dán URL, hoặc nhập văn bản thô để hướng dẫn nghiên cứu của AI.",
+      addUrl: "Thêm URL",
+      pasteText: "Dán Văn Bản",
+      configureTitle: "Tinh Chỉnh Kết Quả",
+      major: "Chuyên Ngành Học Thuật",
+      thesisLevel: "Cấp Độ Luận Văn",
+      writingStyle: "Phong Cách Viết",
+      citationStyle: "Phong Cách Trích Dẫn",
+      generateFull: "Tạo Luận Văn Đầy Đủ",
+      processing: "Đang xử lý...",
+      thesisTitle: "Tiêu Đề Luận Văn (Tùy Chọn)",
+      titlePlaceholder: "Để AI quyết định hoặc nhập tiêu đề của riêng bạn...",
+      generateTitles: "Tạo Các Tùy Chọn Tiêu Đề từ nguồn",
+      antiPlagiarismDesc: "Diễn đạt lại một cách tự nhiên để giảm điểm tương đồng.",
+      language: "Ngôn Ngữ Mục Tiêu",
+      contentLength: "Độ Dài Nội Dung",
+      fontProfile: "Hồ Sơ Phông Chữ",
+      antiPlagiarism: "Chống Đạo Văn",
+      ctaBadge: "Sẵn Sàng Cho Luận Văn",
+      ctaTitle: "Kết quả đạt chuẩn học thuật, tiếp theo là nguồn gốc nghiên cứu trên chuỗi.",
+      ctaDesc: "Lộ trình Stacks: lưu trữ hash tài liệu cuối cùng bằng Clarity, cấp huy hiệu cho người đánh giá, và thêm ưu đãi liên kết với sBTC cho người đóng góp khi nguồn gốc nghiên cứu phát triển.",
+      ctaButton: "Bắt Đầu Viết Ngay",
+      walletGuideTitle: "Cách Kết Nối Ví Của Bạn",
+      walletGuideDesc: "Kết nối ví Stacks của bạn để kiểm tra số dư $THESIS và đúc Chứng Chỉ Luận Văn của bạn trên chuỗi.",
+      walletGuideStep1: "Cài đặt tiện ích ví Leather hoặc Xverse trong trình duyệt của bạn",
+      walletGuideStep2: "Nhấp vào nút \"Connect Stacks\" trên thanh điều hướng phía trên",
+      walletGuideStep3: "Chấp thuận yêu cầu kết nối trong cửa sổ bật lên của ví bạn",
+      walletGuideStep4: "Số dư $THESIS của bạn sẽ xuất hiện tự động",
+      walletGuideMobile: "Trên di động, hãy mở trang này trong trình duyệt tích hợp của Leather hoặc Xverse để truy cập ví.",
+      walletGuideLeather: "Lấy Ví Leather",
+      walletGuideXverse: "Lấy Ví Xverse",
+      walletGuideLoginTitle: "Đăng Nhập Để Truy Cập Bảng Điều Khiển Của Bạn",
+      walletGuideLoginDesc: "Đăng nhập bằng Google để lưu bản nháp luận văn, xem lịch sử tạo nội dung, và quản lý thư viện nghiên cứu của bạn trên tất cả thiết bị.",
+      walletGuideLoginBtn: "Đăng nhập bằng Google",
+      walletGuideOrHold: "Hoặc giữ 1.000 token $THESIS",
+      stakeTitle: "Mở Khóa Toàn Quyền Truy Cập",
+      stakeDesc: "Mở khóa tất cả tính năng của ThesisAI bằng cách giữ 1.000 token $THESIS trong ví đã kết nối của bạn.",
+      stakeOption1: "Giữ 1.000 $THESIS",
+      stakeOption1Desc: "Giữ ít nhất 1.000 token $THESIS trong ví Stacks đã kết nối để mở khóa vĩnh viễn tất cả tính năng.",
+      stakeCheckBalance: "Kiểm Tra Số Dư $THESIS Của Tôi",
+
+      saveUnlimitedDrafts: "Lưu không giới hạn bản nháp luận văn vào thư viện của bạn",
+      accessGenHistory: "Truy cập lịch sử tạo nội dung & sửa đổi",
+      syncDevices: "Đồng bộ hóa tự động giữa các thiết bị",
+      viewCertificates: "Xem & quản lý chứng chỉ đã đúc",
+      signedInAsPrefix: "Đã đăng nhập với tên",
+      accessGate: "Cổng Truy Cập",
+      activeNow: "Đang Hoạt Động",
+      connectWalletBtn: "Kết Nối Ví",
+      communityTraction: "Sức Hút Cộng Đồng",
+      researchersGenerating: "Các nhà nghiên cứu đã đang tạo nội dung.",
+      thesesGenerated: "Luận Văn Đã Tạo",
+      latestBarLive: "thanh gần nhất là dữ liệu trực tiếp trên chuỗi",
+      monthsActive: "Tháng Hoạt Động",
+      exportFormatsLabel: "Định Dạng Xuất",
+      revisionsLabel: "Sửa Đổi",
+    },
+    th: {
+      tagline: "ตัวแทนวิจัยอัตโนมัติ",
+      heroBadge: "ปัญญาประดิษฐ์ทางวิชาการที่ขับเคลื่อนด้วย Stacks",
+      heroTitle: "เปลี่ยนแหล่งข้อมูลวิจัยให้เป็นพื้นที่ทำงานวิทยานิพนธ์ที่เรียบร้อย",
+      heroDesc: "ThesisAI ผสมผสาน AI ความเร็วระดับ Groq การเขียนที่ตระหนักถึงการอ้างอิง เครื่องมือส่งออก และแผนงานชั้นพิสูจน์ที่ปลอดภัยด้วย Stacks เพื่อให้นักศึกษาสามารถก้าวจากแหล่งข้อมูลดิบไปสู่งานวิชาการที่มีโครงสร้างโดยไม่หลงทาง",
+      launchStudio: "เปิดสตูดิโอวิจัย",
+      connectStacks: "สำรวจชั้น Stacks",
+      stacksNote: "สร้างขึ้นด้วยแผนงานความปลอดภัยระดับ Stacks: แหล่งที่มาของงานวิจัยที่ตรวจสอบได้ การพิสูจน์แฮชเอกสาร และการตรวจสอบบนเชนในอนาคต — โดยไม่รบกวนกระบวนการเขียนของคุณ",
+      aiModels: "เครือข่ายโมเดล AI ของ Groq",
+      aiModelsDesc: "กำหนดเส้นทางงานวิจัยผ่าน Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill และโมเดลสำรองที่รวดเร็วจากเซิร์ฟเวอร์",
+      sourceIngestion: "การนำเข้าแหล่งข้อมูล",
+      sourceIngestionDesc: "เพิ่ม URL วางข้อความ หรืออัปโหลดเอกสาร PDF/TXT/MD เป็นฐานความรู้ที่มีการแนะนำก่อนการสร้างเนื้อหา",
+      thesisWorkflow: "กระบวนการทำงานวิทยานิพนธ์",
+      thesisWorkflowDesc: "สร้างชื่อเรื่อง โครงสร้าง บท เอกสารอ้างอิง การแก้ไข และการส่งออกในพื้นที่ทำงานที่ลื่นไหลและตอบสนองได้ดี",
+      stacksLayer: "ชั้นพิสูจน์ Stacks",
+      stacksLayerDesc: "ออกแบบมาเพื่อการพิสูจน์งานวิจัยในอนาคต สิ่งจูงใจ sBTC และการรวมสมาร์ทคอนแทรกต์ Clarity บน Stacks",
+      create: "สร้าง",
+      dashboard: "แดชบอร์ด",
+      about: "เกี่ยวกับ",
+      signIn: "เข้าสู่ระบบ",
+      signOut: "ออกจากระบบ",
+      newThesis: "วิทยานิพนธ์ใหม่",
+      myLibrary: "คลังวิจัยของฉัน",
+      manageDrafts: "จัดการแบบร่างวิทยานิพนธ์และงานวิจัยที่บันทึกไว้ของคุณ",
+      noSavedFound: "ไม่พบวิทยานิพนธ์ที่บันทึกไว้",
+      startGenerating: "เริ่มสร้างวิทยานิพนธ์และบันทึกเพื่อดูที่นี่ในคลังส่วนตัวของคุณ",
+      initiate: "เริ่มการสร้าง",
+      openDraft: "เปิดแบบร่าง",
+      saveDraft: "บันทึกแบบร่าง",
+      exportPptx: "ส่งออก PPTX",
+      exportPdf: "ส่งออก PDF",
+      regenerate: "สร้างบทใหม่",
+      aboutTitle: "เกี่ยวกับ ThesisAI",
+      aboutDesc: "ThesisAI คือพื้นที่ทำงานวิจัยอัตโนมัติที่สอดคล้องกับ Stacks ซึ่งเปลี่ยนแหล่งข้อมูลที่ผู้ใช้ให้มาเป็นแบบร่างทางวิชาการที่มีโครงสร้าง ขณะเดียวกันก็เตรียมผลิตภัณฑ์สำหรับแหล่งที่มาของเอกสารที่ตรวจสอบได้บนโครงสร้างพื้นฐานที่ปลอดภัยด้วย Stacks",
+      disclaimerTitle: "ข้อสงวนสิทธิ์และจริยธรรม",
+      disclaimerDesc: "เครื่องมือนี้เป็นผู้ช่วย AI ปัญญาประดิษฐ์อาจเกิดอาการหลอนหรือให้ข้อมูลที่ไม่ถูกต้อง โปรดตรวจสอบข้อเท็จจริงและการอ้างอิงเสมอ ThesisAI มีไว้เพื่อช่วยเหลือ ไม่ใช่แทนที่การคิดเชิงวิพากษ์ ใช้อย่างมีความรับผิดชอบและปฏิบัติตามแนวทางความซื่อสัตย์ทางวิชาการของสถาบันของคุณ",
+      donationTitle: "สนับสนุนโครงการนี้",
+      donationDesc: "โครงการนี้ได้รับการพัฒนาอย่างเป็นอิสระเพื่อช่วยนักศึกษาทั่วโลก หากคุณพบว่ามีประโยชน์ โปรดพิจารณาสนับสนุนการดูแลรักษาและการพัฒนาต่อไป",
+      languageName: "ภาษาไทย",
+      saveConfirmation: "บันทึกวิทยานิพนธ์สำเร็จแล้ว!",
+      loginRequirement: "กรุณาเข้าสู่ระบบก่อนเพื่อบันทึกความคืบหน้าของคุณ",
+      revertConfirmation: "คุณแน่ใจหรือไม่ว่าต้องการย้อนกลับไปยังเวอร์ชันนี้? การเปลี่ยนแปลงที่ยังไม่บันทึกในมุมมองปัจจุบันจะสูญหาย",
+      step1Title: "ฐานความรู้",
+      step1Desc: "อัปโหลด PDF วาง URL หรือป้อนข้อความดิบเพื่อแนะนำการวิจัยของ AI",
+      addUrl: "เพิ่ม URL",
+      pasteText: "วางข้อความ",
+      configureTitle: "ปรับแต่งผลลัพธ์",
+      major: "สาขาวิชา",
+      thesisLevel: "ระดับวิทยานิพนธ์",
+      writingStyle: "สไตล์การเขียน",
+      citationStyle: "รูปแบบการอ้างอิง",
+      generateFull: "สร้างวิทยานิพนธ์ฉบับสมบูรณ์",
+      processing: "กำลังประมวลผล...",
+      thesisTitle: "ชื่อวิทยานิพนธ์ (ไม่บังคับ)",
+      titlePlaceholder: "ให้ AI ตัดสินใจหรือพิมพ์ของคุณเอง...",
+      generateTitles: "สร้างตัวเลือกชื่อเรื่องจากแหล่งข้อมูล",
+      antiPlagiarismDesc: "ถอดความตามธรรมชาติเพื่อลดคะแนนความคล้ายคลึง",
+      language: "ภาษาเป้าหมาย",
+      contentLength: "ความยาวเนื้อหา",
+      fontProfile: "โปรไฟล์ฟอนต์",
+      antiPlagiarism: "ป้องกันการลอกเลียนแบบ",
+      ctaBadge: "พร้อมสำหรับวิทยานิพนธ์",
+      ctaTitle: "ผลลัพธ์ระดับวิชาการ ถัดไปคือแหล่งที่มาของงานวิจัยบนเชน",
+      ctaDesc: "แผนงาน Stacks: ยึดแฮชเอกสารฉบับสุดท้ายด้วย Clarity ออกเครื่องหมายผู้ตรวจสอบ และเพิ่มสิ่งจูงใจที่สอดคล้องกับ sBTC สำหรับผู้สนับสนุนตามการพัฒนาแหล่งที่มาของงานวิจัย",
+      ctaButton: "เริ่มเขียนตอนนี้",
+      walletGuideTitle: "วิธีเชื่อมต่อกระเป๋าเงินของคุณ",
+      walletGuideDesc: "เชื่อมต่อกระเป๋าเงิน Stacks ของคุณเพื่อตรวจสอบยอดคงเหลือ $THESIS และสร้างใบรับรองวิทยานิพนธ์ของคุณบนเชน",
+      walletGuideStep1: "ติดตั้งส่วนขยายกระเป๋าเงิน Leather หรือ Xverse ในเบราว์เซอร์ของคุณ",
+      walletGuideStep2: "คลิกปุ่ม \"Connect Stacks\" ที่แถบนำทางด้านบน",
+      walletGuideStep3: "อนุมัติคำขอเชื่อมต่อในป๊อปอัปกระเป๋าเงินของคุณ",
+      walletGuideStep4: "ยอดคงเหลือ $THESIS ของคุณจะปรากฏขึ้นโดยอัตโนมัติ",
+      walletGuideMobile: "บนมือถือ เปิดไซต์นี้ในเบราว์เซอร์ในแอปของ Leather หรือ Xverse เพื่อเข้าถึงกระเป๋าเงิน",
+      walletGuideLeather: "รับกระเป๋าเงิน Leather",
+      walletGuideXverse: "รับกระเป๋าเงิน Xverse",
+      walletGuideLoginTitle: "เข้าสู่ระบบเพื่อเข้าถึงแดชบอร์ดของคุณ",
+      walletGuideLoginDesc: "เข้าสู่ระบบด้วย Google เพื่อบันทึกแบบร่างวิทยานิพนธ์ ดูประวัติการสร้าง และจัดการคลังวิจัยของคุณในทุกอุปกรณ์",
+      walletGuideLoginBtn: "เข้าสู่ระบบด้วย Google",
+      walletGuideOrHold: "หรือถือ 1,000 โทเค็น $THESIS",
+      stakeTitle: "ปลดล็อกการเข้าถึงแบบเต็ม",
+      stakeDesc: "ปลดล็อกฟีเจอร์ทั้งหมดของ ThesisAI โดยการถือโทเค็น $THESIS จำนวน 1,000 ในกระเป๋าเงินที่เชื่อมต่อของคุณ",
+      stakeOption1: "ถือ 1,000 $THESIS",
+      stakeOption1Desc: "ถือโทเค็น $THESIS อย่างน้อย 1,000 ในกระเป๋าเงิน Stacks ที่เชื่อมต่อเพื่อปลดล็อกฟีเจอร์ทั้งหมดอย่างถาวร",
+      stakeCheckBalance: "ตรวจสอบยอดคงเหลือ $THESIS ของฉัน",
+
+      saveUnlimitedDrafts: "บันทึกแบบร่างวิทยานิพนธ์ไม่จำกัดลงในคลังของคุณ",
+      accessGenHistory: "เข้าถึงประวัติการสร้างและการแก้ไข",
+      syncDevices: "ซิงค์ข้อมูลข้ามอุปกรณ์โดยอัตโนมัติ",
+      viewCertificates: "ดูและจัดการใบรับรองที่สร้างขึ้น",
+      signedInAsPrefix: "เข้าสู่ระบบในชื่อ",
+      accessGate: "ประตูการเข้าถึง",
+      activeNow: "กำลังใช้งาน",
+      connectWalletBtn: "เชื่อมต่อกระเป๋าเงิน",
+      communityTraction: "การมีส่วนร่วมของชุมชน",
+      researchersGenerating: "นักวิจัยกำลังสร้างผลงานอยู่แล้ว",
+      thesesGenerated: "วิทยานิพนธ์ที่สร้างขึ้น",
+      latestBarLive: "แถบล่าสุดเป็นข้อมูลสดบนเชน",
+      monthsActive: "เดือนที่ใช้งาน",
+      exportFormatsLabel: "รูปแบบการส่งออก",
+      revisionsLabel: "การแก้ไข",
+    },
+    hi: {
+      tagline: "स्वायत्त शोध एजेंट",
+      heroBadge: "Stacks-संचालित अकादमिक बुद्धिमत्ता",
+      heroTitle: "शोध स्रोतों को एक परिष्कृत थीसिस कार्यक्षेत्र में बदलें।",
+      heroDesc: "ThesisAI Groq-गति AI, उद्धरण-जागरूक लेखन, निर्यात उपकरण, और Stacks-सुरक्षित प्रमाण लेयर रोडमैप को जोड़ता है ताकि छात्र कच्चे स्रोतों से संरचित अकादमिक कार्य की ओर बिना भटके बढ़ सकें।",
+      launchStudio: "शोध स्टूडियो लॉन्च करें",
+      connectStacks: "Stacks लेयर का अन्वेषण करें",
+      stacksNote: "Stacks-स्तरीय सुरक्षा रोडमैप के साथ बनाया गया: सत्यापन योग्य शोध उद्गम, दस्तावेज़-हैश प्रूफिंग, और भविष्य का ऑन-चेन सत्यापन — आपके लेखन प्रवाह को बाधित किए बिना।",
+      aiModels: "Groq AI मॉडल मेश",
+      aiModelsDesc: "सर्वर से Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, और तेज़ बैकअप मॉडलों के माध्यम से शोध कार्यों को निर्देशित करता है।",
+      sourceIngestion: "स्रोत समावेशन",
+      sourceIngestionDesc: "जनरेशन से पहले मार्गदर्शित ज्ञान आधार के रूप में URL जोड़ें, टेक्स्ट पेस्ट करें, या PDF/TXT/MD दस्तावेज़ अपलोड करें।",
+      thesisWorkflow: "थीसिस वर्कफ़्लो",
+      thesisWorkflowDesc: "एक सहज, उत्तरदायी कार्यक्षेत्र में शीर्षक, संरचनाएँ, अध्याय, संदर्भ, संशोधन, और निर्यात उत्पन्न करें।",
+      stacksLayer: "Stacks प्रूफ लेयर",
+      stacksLayerDesc: "भविष्य के शोध-प्रमाण, sBTC प्रोत्साहन, और Stacks पर Clarity स्मार्ट-कॉन्ट्रैक्ट एकीकरण के लिए डिज़ाइन किया गया।",
+      create: "बनाएं",
+      dashboard: "डैशबोर्ड",
+      about: "के बारे में",
+      signIn: "साइन इन करें",
+      signOut: "साइन आउट करें",
+      newThesis: "नई थीसिस",
+      myLibrary: "मेरी शोध लाइब्रेरी",
+      manageDrafts: "अपने सहेजे गए थीसिस ड्राफ्ट और शोध कार्य का प्रबंधन करें।",
+      noSavedFound: "कोई सहेजी गई थीसिस नहीं मिली",
+      startGenerating: "एक थीसिस बनाना शुरू करें और इसे अपनी व्यक्तिगत लाइब्रेरी में यहाँ देखने के लिए सहेजें।",
+      initiate: "जनरेशन शुरू करें",
+      openDraft: "ड्राफ्ट खोलें",
+      saveDraft: "ड्राफ्ट सहेजें",
+      exportPptx: "PPTX निर्यात करें",
+      exportPdf: "PDF निर्यात करें",
+      regenerate: "अध्याय पुनः बनाएं",
+      aboutTitle: "ThesisAI के बारे में",
+      aboutDesc: "ThesisAI एक Stacks-संरेखित स्वायत्त शोध कार्यक्षेत्र है जो उपयोगकर्ता द्वारा प्रदान किए गए स्रोतों को संरचित अकादमिक ड्राफ्ट में बदलता है, साथ ही Stacks-सुरक्षित इंफ्रास्ट्रक्चर पर सत्यापन योग्य दस्तावेज़ उद्गम के लिए उत्पाद तैयार करता है।",
+      disclaimerTitle: "अस्वीकरण और नैतिकता",
+      disclaimerDesc: "यह उपकरण एक AI सहायक है। AI मतिभ्रम कर सकता है या गलत जानकारी उत्पन्न कर सकता है। हमेशा तथ्यों और उद्धरणों की पुष्टि करें। ThesisAI का उद्देश्य आलोचनात्मक सोच में सहायता करना है, उसे प्रतिस्थापित करना नहीं। जिम्मेदारी से उपयोग करें और अपने संस्थान के अकादमिक अखंडता दिशानिर्देशों का पालन करें।",
+      donationTitle: "इस प्रोजेक्ट का समर्थन करें",
+      donationDesc: "यह प्रोजेक्ट दुनिया भर के छात्रों की मदद के लिए स्वतंत्र रूप से विकसित किया गया है। यदि आपको यह सहायक लगता है, तो इसके रखरखाव और आगे के विकास का समर्थन करने पर विचार करें।",
+      languageName: "हिन्दी",
+      saveConfirmation: "थीसिस सफलतापूर्वक सहेजी गई!",
+      loginRequirement: "अपनी प्रगति सहेजने के लिए कृपया पहले साइन इन करें।",
+      revertConfirmation: "क्या आप वाकई इस संस्करण पर वापस जाना चाहते हैं? वर्तमान दृश्य में कोई भी असहेजे गए परिवर्तन खो जाएंगे।",
+      step1Title: "ज्ञान आधार",
+      step1Desc: "AI के शोध को निर्देशित करने के लिए PDF अपलोड करें, URL पेस्ट करें, या कच्चा टेक्स्ट दर्ज करें।",
+      addUrl: "URL जोड़ें",
+      pasteText: "टेक्स्ट पेस्ट करें",
+      configureTitle: "आउटपुट को परिष्कृत करें",
+      major: "अकादमिक विषय",
+      thesisLevel: "थीसिस स्तर",
+      writingStyle: "लेखन शैली",
+      citationStyle: "उद्धरण शैली",
+      generateFull: "पूर्ण थीसिस बनाएं",
+      processing: "प्रोसेसिंग हो रही है...",
+      thesisTitle: "थीसिस शीर्षक (वैकल्पिक)",
+      titlePlaceholder: "AI को तय करने दें या अपना खुद का टाइप करें...",
+      generateTitles: "स्रोतों से शीर्षक विकल्प बनाएं",
+      antiPlagiarismDesc: "समानता स्कोर को कम करने के लिए स्वाभाविक रूप से पुनर्लेखन करता है।",
+      language: "लक्ष्य भाषा",
+      contentLength: "सामग्री की लंबाई",
+      fontProfile: "फ़ॉन्ट प्रोफ़ाइल",
+      antiPlagiarism: "साहित्यिक चोरी विरोधी",
+      ctaBadge: "थीसिस के लिए तैयार",
+      ctaTitle: "अकादमिक-स्तर का आउटपुट, अगला ऑन-चेन शोध उद्गम।",
+      ctaDesc: "Stacks रोडमैप: Clarity के साथ अंतिम दस्तावेज़ हैश को एंकर करें, समीक्षक बैज जारी करें, और शोध उद्गम के विकसित होने के साथ योगदानकर्ताओं के लिए sBTC-संरेखित प्रोत्साहन जोड़ें।",
+      ctaButton: "अभी लिखना शुरू करें",
+      walletGuideTitle: "अपना वॉलेट कैसे कनेक्ट करें",
+      walletGuideDesc: "अपना $THESIS बैलेंस जांचने और ऑन-चेन अपना थीसिस सर्टिफिकेट मिंट करने के लिए अपना Stacks वॉलेट कनेक्ट करें।",
+      walletGuideStep1: "अपने ब्राउज़र में Leather या Xverse वॉलेट एक्सटेंशन इंस्टॉल करें",
+      walletGuideStep2: "शीर्ष नेविगेशन में \"Connect Stacks\" बटन पर क्लिक करें",
+      walletGuideStep3: "अपने वॉलेट पॉपअप में कनेक्शन अनुरोध को स्वीकृत करें",
+      walletGuideStep4: "आपका $THESIS बैलेंस स्वचालित रूप से दिखाई देगा",
+      walletGuideMobile: "मोबाइल पर, वॉलेट एक्सेस के लिए इस साइट को Leather या Xverse इन-ऐप ब्राउज़र के भीतर खोलें।",
+      walletGuideLeather: "Leather वॉलेट प्राप्त करें",
+      walletGuideXverse: "Xverse वॉलेट प्राप्त करें",
+      walletGuideLoginTitle: "अपने डैशबोर्ड तक पहुंचने के लिए साइन इन करें",
+      walletGuideLoginDesc: "अपने थीसिस ड्राफ्ट सहेजने, जनरेशन इतिहास देखने, और सभी डिवाइसों पर अपनी शोध लाइब्रेरी का प्रबंधन करने के लिए Google से साइन इन करें।",
+      walletGuideLoginBtn: "Google से साइन इन करें",
+      walletGuideOrHold: "या 1,000 $THESIS टोकन रखें",
+      stakeTitle: "पूर्ण एक्सेस अनलॉक करें",
+      stakeDesc: "अपने कनेक्टेड वॉलेट में 1,000 $THESIS टोकन रखकर ThesisAI की सभी सुविधाओं को अनलॉक करें।",
+      stakeOption1: "1,000 $THESIS रखें",
+      stakeOption1Desc: "सभी सुविधाओं को स्थायी रूप से अनलॉक करने के लिए अपने कनेक्टेड Stacks वॉलेट में कम से कम 1,000 $THESIS टोकन रखें।",
+      stakeCheckBalance: "मेरा $THESIS बैलेंस जांचें",
+
+      saveUnlimitedDrafts: "अपनी लाइब्रेरी में असीमित थीसिस ड्राफ्ट सहेजें",
+      accessGenHistory: "जनरेशन इतिहास और संशोधनों तक पहुंचें",
+      syncDevices: "सभी डिवाइसों में स्वचालित रूप से सिंक करें",
+      viewCertificates: "मिंट किए गए सर्टिफिकेट देखें और प्रबंधित करें",
+      signedInAsPrefix: "इस रूप में साइन इन किया गया",
+      accessGate: "एक्सेस गेट",
+      activeNow: "अभी सक्रिय",
+      connectWalletBtn: "वॉलेट कनेक्ट करें",
+      communityTraction: "समुदाय की सहभागिता",
+      researchersGenerating: "शोधकर्ता पहले से ही जनरेट कर रहे हैं।",
+      thesesGenerated: "थीसिस जनरेट की गईं",
+      latestBarLive: "नवीनतम बार लाइव ऑन-चेन डेटा है",
+      monthsActive: "सक्रिय महीने",
+      exportFormatsLabel: "निर्यात प्रारूप",
+      revisionsLabel: "संशोधन",
+    },
+    fa: {
+      tagline: "عامل پژوهش خودکار",
+      heroBadge: "هوش آکادمیک مبتنی بر Stacks",
+      heroTitle: "منابع پژوهشی را به یک فضای کاری پایان‌نامه منظم تبدیل کنید.",
+      heroDesc: "ThesisAI هوش مصنوعی با سرعت Groq، نگارش آگاه به استناد، ابزارهای خروجی، و نقشه راه لایه اثبات ایمن‌شده با Stacks را ترکیب می‌کند تا دانشجویان بتوانند بدون سردرگمی از منابع خام به کار آکادمیک ساختاریافته برسند.",
+      launchStudio: "راه‌اندازی استودیوی پژوهش",
+      connectStacks: "بررسی لایه Stacks",
+      stacksNote: "ساخته شده با نقشه راه امنیتی در سطح Stacks: اصالت پژوهش قابل تأیید، اثبات هش سند، و اعتبارسنجی آینده روی زنجیره — بدون مختل کردن روند نگارش شما.",
+      aiModels: "شبکه مدل‌های هوش مصنوعی Groq",
+      aiModelsDesc: "وظایف پژوهشی را از طریق Llama 3.3 70B، Qwen3 32B، DeepSeek R1 Distill، و مدل‌های پشتیبان سریع از سرور هدایت می‌کند.",
+      sourceIngestion: "دریافت منابع",
+      sourceIngestionDesc: "پیش از تولید محتوا، URL اضافه کنید، متن بچسبانید، یا اسناد PDF/TXT/MD را به‌عنوان پایگاه دانش هدایت‌شده بارگذاری کنید.",
+      thesisWorkflow: "گردش کار پایان‌نامه",
+      thesisWorkflowDesc: "عنوان‌ها، ساختارها، فصل‌ها، منابع، بازنگری‌ها، و خروجی‌ها را در یک فضای کاری روان و واکنش‌گرا تولید کنید.",
+      stacksLayer: "لایه اثبات Stacks",
+      stacksLayerDesc: "طراحی‌شده برای اثبات پژوهش آینده، مزایای sBTC، و یکپارچه‌سازی قرارداد هوشمند Clarity روی Stacks.",
+      create: "ایجاد",
+      dashboard: "داشبورد",
+      about: "درباره",
+      signIn: "ورود",
+      signOut: "خروج",
+      newThesis: "پایان‌نامه جدید",
+      myLibrary: "کتابخانه پژوهشی من",
+      manageDrafts: "پیش‌نویس‌های پایان‌نامه ذخیره‌شده و کارهای پژوهشی خود را مدیریت کنید.",
+      noSavedFound: "هیچ پایان‌نامه ذخیره‌شده‌ای یافت نشد",
+      startGenerating: "تولید یک پایان‌نامه را شروع کنید و آن را ذخیره کنید تا اینجا در کتابخانه شخصی خود ببینید.",
+      initiate: "شروع تولید",
+      openDraft: "باز کردن پیش‌نویس",
+      saveDraft: "ذخیره پیش‌نویس",
+      exportPptx: "خروجی PPTX",
+      exportPdf: "خروجی PDF",
+      regenerate: "بازتولید فصل",
+      aboutTitle: "درباره ThesisAI",
+      aboutDesc: "ThesisAI یک فضای کاری پژوهشی خودکار همسو با Stacks است که منابع ارائه‌شده توسط کاربر را به پیش‌نویس‌های آکادمیک ساختاریافته تبدیل می‌کند، و در عین حال محصول را برای اصالت سند قابل تأیید روی زیرساخت ایمن‌شده با Stacks آماده می‌کند.",
+      disclaimerTitle: "اعلام مسئولیت و اخلاق",
+      disclaimerDesc: "این ابزار یک دستیار هوش مصنوعی است. هوش مصنوعی ممکن است توهم بزند یا اطلاعات نادرست تولید کند. همیشه واقعیت‌ها و استنادها را تأیید کنید. ThesisAI برای کمک طراحی شده، نه جایگزینی تفکر انتقادی. مسئولانه استفاده کنید و از دستورالعمل‌های صداقت آکادمیک مؤسسه خود پیروی کنید.",
+      donationTitle: "از این پروژه حمایت کنید",
+      donationDesc: "این پروژه به‌طور مستقل برای کمک به دانشجویان در سراسر جهان توسعه یافته است. اگر آن را مفید می‌دانید، حمایت از نگهداری و توسعه بیشتر آن را در نظر بگیرید.",
+      languageName: "فارسی",
+      saveConfirmation: "پایان‌نامه با موفقیت ذخیره شد!",
+      loginRequirement: "لطفاً ابتدا برای ذخیره پیشرفت خود وارد شوید.",
+      revertConfirmation: "آیا مطمئن هستید که می‌خواهید به این نسخه بازگردید؟ هرگونه تغییر ذخیره‌نشده در نمای فعلی از بین خواهد رفت.",
+      step1Title: "پایگاه دانش",
+      step1Desc: "برای هدایت پژوهش هوش مصنوعی، فایل PDF بارگذاری کنید، URL بچسبانید، یا متن خام وارد کنید.",
+      addUrl: "افزودن URL",
+      pasteText: "چسباندن متن",
+      configureTitle: "بهبود خروجی",
+      major: "رشته آکادمیک",
+      thesisLevel: "سطح پایان‌نامه",
+      writingStyle: "سبک نگارش",
+      citationStyle: "سبک استناد",
+      generateFull: "تولید پایان‌نامه کامل",
+      processing: "در حال پردازش...",
+      thesisTitle: "عنوان پایان‌نامه (اختیاری)",
+      titlePlaceholder: "اجازه دهید هوش مصنوعی تصمیم بگیرد یا عنوان خود را تایپ کنید...",
+      generateTitles: "تولید گزینه‌های عنوان از منابع",
+      antiPlagiarismDesc: "به‌طور طبیعی بازنویسی می‌کند تا امتیاز شباهت را کاهش دهد.",
+      language: "زبان هدف",
+      contentLength: "طول محتوا",
+      fontProfile: "پروفایل فونت",
+      antiPlagiarism: "ضد سرقت ادبی",
+      ctaBadge: "آماده برای پایان‌نامه",
+      ctaTitle: "خروجی در سطح آکادمیک، اصالت پژوهش روی زنجیره در ادامه.",
+      ctaDesc: "نقشه راه Stacks: تثبیت هش اسناد نهایی با Clarity، صدور نشان داوران، و افزودن مزایای همسو با sBTC برای مشارکت‌کنندگان با تحول اصالت پژوهش.",
+      ctaButton: "همین حالا نوشتن را شروع کنید",
+      walletGuideTitle: "نحوه اتصال کیف پول شما",
+      walletGuideDesc: "کیف پول Stacks خود را متصل کنید تا موجودی $THESIS خود را بررسی کرده و گواهی پایان‌نامه خود را روی زنجیره ضرب کنید.",
+      walletGuideStep1: "افزونه کیف پول Leather یا Xverse را در مرورگر خود نصب کنید",
+      walletGuideStep2: "روی دکمه \"Connect Stacks\" در نوار ناوبری بالا کلیک کنید",
+      walletGuideStep3: "درخواست اتصال را در پاپ‌آپ کیف پول خود تأیید کنید",
+      walletGuideStep4: "موجودی $THESIS شما به‌طور خودکار نمایش داده می‌شود",
+      walletGuideMobile: "در موبایل، این سایت را در مرورگر داخلی Leather یا Xverse برای دسترسی به کیف پول باز کنید.",
+      walletGuideLeather: "دریافت کیف پول Leather",
+      walletGuideXverse: "دریافت کیف پول Xverse",
+      walletGuideLoginTitle: "برای دسترسی به داشبورد خود وارد شوید",
+      walletGuideLoginDesc: "با Google وارد شوید تا پیش‌نویس‌های پایان‌نامه خود را ذخیره کنید، تاریخچه تولید را مشاهده کنید، و کتابخانه پژوهشی خود را در همه دستگاه‌ها مدیریت کنید.",
+      walletGuideLoginBtn: "ورود با Google",
+      walletGuideOrHold: "یا 1,000 توکن $THESIS نگه دارید",
+      stakeTitle: "باز کردن دسترسی کامل",
+      stakeDesc: "با نگه‌داشتن 1,000 توکن $THESIS در کیف پول متصل خود، تمام ویژگی‌های ThesisAI را باز کنید.",
+      stakeOption1: "نگه‌داشتن 1,000 $THESIS",
+      stakeOption1Desc: "حداقل 1,000 توکن $THESIS را در کیف پول Stacks متصل خود نگه دارید تا تمام ویژگی‌ها را به‌طور دائمی باز کنید.",
+      stakeCheckBalance: "بررسی موجودی $THESIS من",
+
+      saveUnlimitedDrafts: "پیش‌نویس‌های پایان‌نامه نامحدود را در کتابخانه خود ذخیره کنید",
+      accessGenHistory: "دسترسی به تاریخچه تولید و بازنگری‌ها",
+      syncDevices: "همگام‌سازی خودکار بین دستگاه‌ها",
+      viewCertificates: "مشاهده و مدیریت گواهی‌های صادرشده",
+      signedInAsPrefix: "وارد شده به‌عنوان",
+      accessGate: "دروازه دسترسی",
+      activeNow: "اکنون فعال",
+      connectWalletBtn: "اتصال کیف پول",
+      communityTraction: "تعامل جامعه",
+      researchersGenerating: "پژوهشگران در حال تولید محتوا هستند.",
+      thesesGenerated: "پایان‌نامه‌های تولیدشده",
+      latestBarLive: "آخرین ستون داده زنده روی زنجیره است",
+      monthsActive: "ماه‌های فعالیت",
+      exportFormatsLabel: "فرمت‌های خروجی",
+      revisionsLabel: "بازنگری‌ها",
+    },
+    ja: {
+      tagline: "自律研究エージェント",
+      heroBadge: "Stacks搭載のアカデミックインテリジェンス",
+      heroTitle: "研究資料を洗練された論文ワークスペースに変換します。",
+      heroDesc: "ThesisAIはGroqの速度のAI、引用を意識した執筆、エクスポートツール、そしてStacksで保護された証明レイヤーのロードマップを組み合わせ、学生が生の資料から構造化された学術的成果へ迷うことなく進めるようにします。",
+      launchStudio: "リサーチスタジオを起動",
+      connectStacks: "Stacksレイヤーを探る",
+      stacksNote: "Stacksグレードのセキュリティロードマップを念頭に構築: 検証可能な研究の出所、文書ハッシュの証明、将来のオンチェーン検証 — あなたの執筆フローを妨げることなく。",
+      aiModels: "Groq AIモデルメッシュ",
+      aiModelsDesc: "Llama 3.3 70B、Qwen3 32B、DeepSeek R1 Distill、サーバーからの高速フォールバックモデル間で研究タスクをルーティングします。",
+      sourceIngestion: "ソースの取り込み",
+      sourceIngestionDesc: "生成前にURLを追加、テキストを貼り付け、またはPDF/TXT/MD文書をガイド付き知識ベースとしてアップロードします。",
+      thesisWorkflow: "論文ワークフロー",
+      thesisWorkflowDesc: "1つのスムーズでレスポンシブなワークスペースでタイトル、構造、章、参考文献、改訂、エクスポートを生成します。",
+      stacksLayer: "Stacks証明レイヤー",
+      stacksLayerDesc: "将来の研究証明、sBTCインセンティブ、Stacks上のClarityスマートコントラクト統合のために設計されています。",
+      create: "作成",
+      dashboard: "ダッシュボード",
+      about: "概要",
+      signIn: "サインイン",
+      signOut: "サインアウト",
+      newThesis: "新しい論文",
+      myLibrary: "マイ研究ライブラリ",
+      manageDrafts: "保存した論文の草稿と研究作業を管理します。",
+      noSavedFound: "保存された論文が見つかりません",
+      startGenerating: "論文の生成を開始し、保存してパーソナルライブラリでここに表示します。",
+      initiate: "生成を開始",
+      openDraft: "草稿を開く",
+      saveDraft: "草稿を保存",
+      exportPptx: "PPTXをエクスポート",
+      exportPdf: "PDFをエクスポート",
+      regenerate: "章を再生成",
+      aboutTitle: "ThesisAIについて",
+      aboutDesc: "ThesisAIはStacksに適合した自律研究ワークスペースであり、ユーザー提供のソースを構造化された学術草稿に変換しながら、Stacksで保護されたインフラ上での検証可能な文書の出所のために製品を準備します。",
+      disclaimerTitle: "免責事項と倫理",
+      disclaimerDesc: "このツールはAIアシスタントです。AIは幻覚を起こしたり不正確な情報を生成したりする可能性があります。常に事実と引用を確認してください。ThesisAIは批判的思考を置き換えるものではなく、支援することを目的としています。責任を持って使用し、所属機関の学術的誠実性のガイドラインに従ってください。",
+      donationTitle: "このプロジェクトを支援する",
+      donationDesc: "このプロジェクトは世界中の学生を支援するために独立して開発されています。役立つと感じた場合は、メンテナンスと今後の開発を支援することをご検討ください。",
+      languageName: "日本語",
+      saveConfirmation: "論文が正常に保存されました！",
+      loginRequirement: "進行状況を保存するには、まずサインインしてください。",
+      revertConfirmation: "このバージョンに戻してもよろしいですか？現在のビューの未保存の変更は失われます。",
+      step1Title: "ナレッジベース",
+      step1Desc: "PDFをアップロード、URLを貼り付け、または生のテキストを入力してAIの研究をガイドします。",
+      addUrl: "URLを追加",
+      pasteText: "テキストを貼り付け",
+      configureTitle: "出力を調整",
+      major: "専攻分野",
+      thesisLevel: "論文レベル",
+      writingStyle: "文体",
+      citationStyle: "引用形式",
+      generateFull: "完全な論文を生成",
+      processing: "処理中...",
+      thesisTitle: "論文タイトル（任意）",
+      titlePlaceholder: "AIに決めさせるか、自分で入力してください...",
+      generateTitles: "ソースからタイトルの選択肢を生成",
+      antiPlagiarismDesc: "類似度スコアを下げるために自然にパラフレーズします。",
+      language: "対象言語",
+      contentLength: "コンテンツの長さ",
+      fontProfile: "フォントプロファイル",
+      antiPlagiarism: "盗作防止",
+      ctaBadge: "論文準備完了",
+      ctaTitle: "学術レベルの出力、次はオンチェーンの研究出所。",
+      ctaDesc: "Stacksロードマップ: Clarityで最終文書ハッシュを固定し、レビュアーバッジを発行し、研究の出所が進化するにつれて貢献者にsBTCに連動したインセンティブを追加します。",
+      ctaButton: "今すぐ書き始める",
+      walletGuideTitle: "ウォレットの接続方法",
+      walletGuideDesc: "Stacksウォレットを接続して$THESISの残高を確認し、論文証明書をオンチェーンで発行します。",
+      walletGuideStep1: "ブラウザにLeatherまたはXverseウォレット拡張機能をインストールします",
+      walletGuideStep2: "上部のナビゲーションで「Connect Stacks」ボタンをクリックします",
+      walletGuideStep3: "ウォレットのポップアップで接続リクエストを承認します",
+      walletGuideStep4: "$THESISの残高が自動的に表示されます",
+      walletGuideMobile: "モバイルでは、ウォレットアクセスのためにLeatherまたはXverseのアプリ内ブラウザでこのサイトを開いてください。",
+      walletGuideLeather: "Leatherウォレットを取得",
+      walletGuideXverse: "Xverseウォレットを取得",
+      walletGuideLoginTitle: "ダッシュボードにアクセスするにはサインインしてください",
+      walletGuideLoginDesc: "Googleでサインインして論文の草稿を保存し、生成履歴を表示し、すべてのデバイスで研究ライブラリを管理します。",
+      walletGuideLoginBtn: "Googleでサインイン",
+      walletGuideOrHold: "または1,000 $THESISトークンを保持",
+      stakeTitle: "フルアクセスをアンロック",
+      stakeDesc: "接続されたウォレットに1,000 $THESISトークンを保持してThesisAIのすべての機能をアンロックします。",
+      stakeOption1: "1,000 $THESISを保持",
+      stakeOption1Desc: "接続されたStacksウォレットに最低1,000 $THESISトークンを保持して、すべての機能を永続的にアンロックします。",
+      stakeCheckBalance: "$THESIS残高を確認",
+
+      saveUnlimitedDrafts: "無制限の論文草稿をライブラリに保存",
+      accessGenHistory: "生成履歴と改訂版にアクセス",
+      syncDevices: "デバイス間で自動的に同期",
+      viewCertificates: "発行された証明書の表示と管理",
+      signedInAsPrefix: "サインイン中:",
+      accessGate: "アクセスゲート",
+      activeNow: "現在アクティブ",
+      connectWalletBtn: "ウォレットを接続",
+      communityTraction: "コミュニティの活動",
+      researchersGenerating: "研究者は既に生成しています。",
+      thesesGenerated: "生成された論文",
+      latestBarLive: "最新のバーはライブのオンチェーンデータです",
+      monthsActive: "活動月数",
+      exportFormatsLabel: "エクスポート形式",
+      revisionsLabel: "改訂",
+    },
+    ko: {
+      tagline: "자율 연구 에이전트",
+      heroBadge: "Stacks 기반 학술 인텔리전스",
+      heroTitle: "연구 자료를 완성도 높은 논문 작업 공간으로 변환하세요.",
+      heroDesc: "ThesisAI는 Groq 속도의 AI, 인용을 인식하는 작성, 내보내기 도구, 그리고 Stacks로 보호되는 증명 계층 로드맵을 결합하여 학생들이 원본 자료에서 구조화된 학술 작업으로 헤매지 않고 나아갈 수 있도록 합니다.",
+      launchStudio: "연구 스튜디오 시작",
+      connectStacks: "Stacks 계층 탐색",
+      stacksNote: "Stacks급 보안 로드맵을 염두에 두고 구축: 검증 가능한 연구 출처, 문서 해시 증명, 그리고 미래의 온체인 검증 — 작성 흐름을 방해하지 않습니다.",
+      aiModels: "Groq AI 모델 메시",
+      aiModelsDesc: "서버의 Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill 및 빠른 백업 모델 간에 연구 작업을 라우팅합니다.",
+      sourceIngestion: "소스 수집",
+      sourceIngestionDesc: "생성 전에 URL을 추가하거나, 텍스트를 붙여넣거나, PDF/TXT/MD 문서를 안내된 지식 기반으로 업로드하세요.",
+      thesisWorkflow: "논문 워크플로우",
+      thesisWorkflowDesc: "하나의 매끄럽고 반응성 좋은 작업 공간에서 제목, 구조, 챕터, 참고문헌, 수정 사항, 내보내기를 생성합니다.",
+      stacksLayer: "Stacks 증명 계층",
+      stacksLayerDesc: "미래의 연구 증명, sBTC 인센티브, 그리고 Stacks의 Clarity 스마트 컨트랙트 통합을 위해 설계되었습니다.",
+      create: "생성",
+      dashboard: "대시보드",
+      about: "소개",
+      signIn: "로그인",
+      signOut: "로그아웃",
+      newThesis: "새 논문",
+      myLibrary: "내 연구 라이브러리",
+      manageDrafts: "저장된 논문 초안과 연구 작업을 관리하세요.",
+      noSavedFound: "저장된 논문을 찾을 수 없습니다",
+      startGenerating: "논문 생성을 시작하고 저장하여 개인 라이브러리에서 확인하세요.",
+      initiate: "생성 시작",
+      openDraft: "초안 열기",
+      saveDraft: "초안 저장",
+      exportPptx: "PPTX 내보내기",
+      exportPdf: "PDF 내보내기",
+      regenerate: "챕터 재생성",
+      aboutTitle: "ThesisAI 소개",
+      aboutDesc: "ThesisAI는 Stacks에 부합하는 자율 연구 작업 공간으로, 사용자가 제공한 자료를 구조화된 학술 초안으로 변환하면서 Stacks로 보호되는 인프라에서 검증 가능한 문서 출처를 위한 제품을 준비합니다.",
+      disclaimerTitle: "면책 조항 및 윤리",
+      disclaimerDesc: "이 도구는 AI 어시스턴트입니다. AI는 환각을 일으키거나 부정확한 정보를 생성할 수 있습니다. 항상 사실과 인용을 확인하세요. ThesisAI는 비판적 사고를 대체하는 것이 아니라 돕는 것을 목표로 합니다. 책임감 있게 사용하고 소속 기관의 학술 윤리 가이드라인을 준수하세요.",
+      donationTitle: "이 프로젝트 후원하기",
+      donationDesc: "이 프로젝트는 전 세계 학생들을 돕기 위해 독립적으로 개발되었습니다. 도움이 되었다면 유지 관리와 추가 개발을 후원하는 것을 고려해 주세요.",
+      languageName: "한국어",
+      saveConfirmation: "논문이 성공적으로 저장되었습니다!",
+      loginRequirement: "진행 상황을 저장하려면 먼저 로그인하세요.",
+      revertConfirmation: "이 버전으로 되돌리시겠습니까? 현재 보기에서 저장되지 않은 변경 사항은 모두 사라집니다.",
+      step1Title: "지식 기반",
+      step1Desc: "AI의 연구를 안내하기 위해 PDF를 업로드하거나, URL을 붙여넣거나, 원본 텍스트를 입력하세요.",
+      addUrl: "URL 추가",
+      pasteText: "텍스트 붙여넣기",
+      configureTitle: "출력 다듬기",
+      major: "학업 전공",
+      thesisLevel: "논문 수준",
+      writingStyle: "작문 스타일",
+      citationStyle: "인용 스타일",
+      generateFull: "전체 논문 생성",
+      processing: "처리 중...",
+      thesisTitle: "논문 제목 (선택사항)",
+      titlePlaceholder: "AI가 결정하도록 하거나 직접 입력하세요...",
+      generateTitles: "소스에서 제목 옵션 생성",
+      antiPlagiarismDesc: "유사도 점수를 줄이기 위해 자연스럽게 의역합니다.",
+      language: "목표 언어",
+      contentLength: "콘텐츠 길이",
+      fontProfile: "폰트 프로필",
+      antiPlagiarism: "표절 방지",
+      ctaBadge: "논문 준비 완료",
+      ctaTitle: "학술 수준의 결과물, 다음은 온체인 연구 출처입니다.",
+      ctaDesc: "Stacks 로드맵: Clarity로 최종 문서 해시를 고정하고, 검토자 배지를 발급하며, 연구 출처가 발전함에 따라 기여자를 위한 sBTC 연계 인센티브를 추가합니다.",
+      ctaButton: "지금 작성 시작하기",
+      walletGuideTitle: "지갑 연결 방법",
+      walletGuideDesc: "Stacks 지갑을 연결하여 $THESIS 잔액을 확인하고 온체인에서 논문 인증서를 발행하세요.",
+      walletGuideStep1: "브라우저에 Leather 또는 Xverse 지갑 확장 프로그램을 설치하세요",
+      walletGuideStep2: "상단 내비게이션에서 \"Connect Stacks\" 버튼을 클릭하세요",
+      walletGuideStep3: "지갑 팝업에서 연결 요청을 승인하세요",
+      walletGuideStep4: "$THESIS 잔액이 자동으로 표시됩니다",
+      walletGuideMobile: "모바일에서는 지갑 액세스를 위해 Leather 또는 Xverse 인앱 브라우저에서 이 사이트를 여세요.",
+      walletGuideLeather: "Leather 지갑 받기",
+      walletGuideXverse: "Xverse 지갑 받기",
+      walletGuideLoginTitle: "대시보드에 액세스하려면 로그인하세요",
+      walletGuideLoginDesc: "Google로 로그인하여 논문 초안을 저장하고, 생성 기록을 확인하고, 모든 기기에서 연구 라이브러리를 관리하세요.",
+      walletGuideLoginBtn: "Google로 로그인",
+      walletGuideOrHold: "또는 1,000 $THESIS 토큰 보유",
+      stakeTitle: "전체 액세스 잠금 해제",
+      stakeDesc: "연결된 지갑에 1,000 $THESIS 토큰을 보유하여 ThesisAI의 모든 기능을 잠금 해제하세요.",
+      stakeOption1: "1,000 $THESIS 보유",
+      stakeOption1Desc: "모든 기능을 영구적으로 잠금 해제하려면 연결된 Stacks 지갑에 최소 1,000 $THESIS 토큰을 보유하세요.",
+      stakeCheckBalance: "내 $THESIS 잔액 확인",
+
+      saveUnlimitedDrafts: "무제한 논문 초안을 라이브러리에 저장",
+      accessGenHistory: "생성 기록 및 수정 사항 액세스",
+      syncDevices: "기기 간 자동 동기화",
+      viewCertificates: "발행된 인증서 보기 및 관리",
+      signedInAsPrefix: "다음으로 로그인됨:",
+      accessGate: "액세스 게이트",
+      activeNow: "현재 활성화됨",
+      connectWalletBtn: "지갑 연결",
+      communityTraction: "커뮤니티 참여도",
+      researchersGenerating: "연구자들이 이미 생성하고 있습니다.",
+      thesesGenerated: "생성된 논문",
+      latestBarLive: "최신 막대는 실시간 온체인 데이터입니다",
+      monthsActive: "활동 월수",
+      exportFormatsLabel: "내보내기 형식",
+      revisionsLabel: "수정 사항",
+    },
+    ha: {
+      tagline: "Wakilin Bincike Mai Cin Gashin Kansa",
+      heroBadge: "Hazaka ta ilimi mai ƴar Stacks",
+      heroTitle: "Mayar da hanyoyin bincike zuwa wurin aiki na kasidar da aka shafe.",
+      heroDesc: "ThesisAI yana haɗa AI mai saurin Groq, rubutu mai sanin ambato, kayan aikin fitarwa, da tsarin shimfidar tabbaci wanda Stacks ya kiyaye domin ɗalibai su iya tafiya daga hanyoyin danye zuwa aikin ilimi mai tsari ba tare da ɓacewa ba.",
+      launchStudio: "Kaddamar da Sitiyo na Bincike",
+      connectStacks: "Bincika Shimfidar Stacks",
+      stacksNote: "An gina shi tare da tsarin tsaro na matakin Stacks: tushen bincike mai tabbatuwa, tabbacin hash na takardu, da tabbatarwa ta gaba akan sarkar — ba tare da tsoma baki cikin tsarin rubutunka ba.",
+      aiModels: "Hanyar Sadarwar Samfurin Groq AI",
+      aiModelsDesc: "Yana jagorantar ayyukan bincike ta hanyar Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, da samfuran madadi masu sauri daga sabar.",
+      sourceIngestion: "Karɓar Hanyoyi",
+      sourceIngestionDesc: "Ƙara URL, manna rubutu, ko loda takardu na PDF/TXT/MD a matsayin tushen ilimi mai jagora kafin ƙirƙira.",
+      thesisWorkflow: "Tsarin Aikin Kasida",
+      thesisWorkflowDesc: "Ƙirƙiri taken, tsari, surori, nassoshi, gyare-gyare, da fitarwa a wurin aiki mai santsi da amsa.",
+      stacksLayer: "Shimfidar Tabbaci ta Stacks",
+      stacksLayerDesc: "An tsara shi don tabbacin bincike na gaba, ƙarfafawar sBTC, da haɗin kwangilar wayo ta Clarity akan Stacks.",
+      create: "Ƙirƙira",
+      dashboard: "Dashboard",
+      about: "Game da",
+      signIn: "Shiga",
+      signOut: "Fita",
+      newThesis: "Sabuwar Kasida",
+      myLibrary: "Laburaren Bincikena",
+      manageDrafts: "Sarrafa zayyanan kasidarku da aikin bincike da aka ajiye.",
+      noSavedFound: "Babu Kasidar da Aka Ajiye da Aka Samu",
+      startGenerating: "Fara ƙirƙirar kasida kuma ajiye ta don ganin ta a nan a laburaren ka na sirri.",
+      initiate: "Fara Ƙirƙira",
+      openDraft: "Buɗe Zayyana",
+      saveDraft: "Ajiye Zayyana",
+      exportPptx: "Fitar da PPTX",
+      exportPdf: "Fitar da PDF",
+      regenerate: "Sake Ƙirƙirar Sura",
+      aboutTitle: "Game da ThesisAI",
+      aboutDesc: "ThesisAI wurin aiki na bincike mai cin gashin kansa ne wanda ya yi daidai da Stacks wanda yake mayar da hanyoyin da mai amfani ya bayar zuwa zayyanan ilimi mai tsari, yayin da yake shirya samfurin don tushen takardu mai tabbatuwa akan tsarin da Stacks ya kiyaye.",
+      disclaimerTitle: "Sanarwa & Da'a",
+      disclaimerDesc: "Wannan kayan aiki mataimaki ne na AI. AI na iya ɓatawa ko samar da bayanai marasa daidai. Koyaushe tabbatar da gaskiya da ambato. ThesisAI na nufin taimakawa, ba maye gurbin tunani mai zurfi ba. Yi amfani da shi cikin nauyi kuma bi ka'idojin gaskiya na ilimi na hukumarku.",
+      donationTitle: "Goyi Bayan Wannan Aikin",
+      donationDesc: "An ƙirƙiri wannan aikin ba tare da dogaro da wani ba domin taimakon ɗalibai a duniya. Idan ka ga yana taimakawa, ka yi la'akari da goyon bayan kiyaye shi da ci gaba da haɓaka shi.",
+      languageName: "Hausa",
+      saveConfirmation: "An ajiye kasida cikin nasara!",
+      loginRequirement: "Da fatan za a shiga tukuna domin ajiye ci gaban ka.",
+      revertConfirmation: "Ka tabbata kana son komawa zuwa wannan sigar? Duk wani canji da ba a ajiye ba a wannan kallon zai ɓace.",
+      step1Title: "Tushen Ilimi",
+      step1Desc: "Loda PDF, manna URL, ko shigar da rubutu danye don jagorantar binciken AI.",
+      addUrl: "Ƙara URL",
+      pasteText: "Manna Rubutu",
+      configureTitle: "Inganta Sakamako",
+      major: "Sashen Ilimi",
+      thesisLevel: "Matakin Kasida",
+      writingStyle: "Salon Rubutu",
+      citationStyle: "Salon Ambato",
+      generateFull: "Ƙirƙiri Cikakkiyar Kasida",
+      processing: "Ana sarrafawa...",
+      thesisTitle: "Taken Kasida (Na Zaɓi)",
+      titlePlaceholder: "Bari AI ya yanke shawara ko ka rubuta naka...",
+      generateTitles: "Ƙirƙiri Zaɓuɓɓukan Take daga hanyoyi",
+      antiPlagiarismDesc: "Yana sake fasalin rubutu ta hanyar dabi'a don rage maki kamanceceniya.",
+      language: "Harshen Manufa",
+      contentLength: "Tsawon Abun Ciki",
+      fontProfile: "Bayanin Font",
+      antiPlagiarism: "Anti-Sata Ilimi",
+      ctaBadge: "A Shirye don Kasida",
+      ctaTitle: "Sakamako na matakin ilimi, tushen bincike akan sarkar na gaba.",
+      ctaDesc: "Tsarin Stacks: ɗora hash na takardu na ƙarshe da Clarity, bayar da bajojin masu duba, da ƙara ƙarfafawa da suka yi daidai da sBTC ga masu bayar da gudunmawa yayin da tushen bincike ke haɓaka.",
+      ctaButton: "Fara Rubutu Yanzu",
+      walletGuideTitle: "Yadda Za a Haɗa Walat Ɗinka",
+      walletGuideDesc: "Haɗa walat ɗinka na Stacks don duba ma'aunin $THESIS ɗinka da ƙirƙirar Takardar Shaidar Kasidarka akan sarkar.",
+      walletGuideStep1: "Saka ƙarin walat na Leather ko Xverse a cikin burauzar ɗinka",
+      walletGuideStep2: "Danna maɓallin \"Connect Stacks\" a saman kewayawa",
+      walletGuideStep3: "Amince da buƙatar haɗi a cikin tsallake-tsallake na walat ɗinka",
+      walletGuideStep4: "Ma'aunin $THESIS ɗinka zai bayyana kai tsaye",
+      walletGuideMobile: "A wayar hannu, buɗe wannan shafin a cikin burauzar Leather ko Xverse don samun damar walat.",
+      walletGuideLeather: "Samu Walat na Leather",
+      walletGuideXverse: "Samu Walat na Xverse",
+      walletGuideLoginTitle: "Shiga don Samun Damar Dashboard Ɗinka",
+      walletGuideLoginDesc: "Shiga da Google don ajiye zayyanan kasidarka, duba tarihin ƙirƙira, da sarrafa laburaren binciken ka a duk na'urori.",
+      walletGuideLoginBtn: "Shiga da Google",
+      walletGuideOrHold: "Ko riƙe alamomin $THESIS 1,000",
+      stakeTitle: "Buɗe Cikakkiyar Damar Shiga",
+      stakeDesc: "Buɗe duk fasalulluran ThesisAI ta hanyar riƙe alamomin $THESIS 1,000 a cikin walat ɗinka da aka haɗa.",
+      stakeOption1: "Riƙe $THESIS 1,000",
+      stakeOption1Desc: "Riƙe aƙalla alamomin $THESIS 1,000 a cikin walat ɗinka na Stacks da aka haɗa don buɗe duk fasaloli har abada.",
+      stakeCheckBalance: "Duba Ma'aunin $THESIS Na",
+
+      saveUnlimitedDrafts: "Ajiye zayyanan kasida marasa iyaka a laburaren ka",
+      accessGenHistory: "Samun damar tarihin ƙirƙira & gyare-gyare",
+      syncDevices: "Daidaita kai tsaye a duk na'urori",
+      viewCertificates: "Duba & sarrafa takardun shaida da aka ƙirƙira",
+      signedInAsPrefix: "An shiga a matsayin",
+      accessGate: "Ƙofar Shiga",
+      activeNow: "Mai Aiki Yanzu",
+      connectWalletBtn: "Haɗa Walat",
+      communityTraction: "Halartar Al'umma",
+      researchersGenerating: "Masu bincike suna ƙirƙira tuni.",
+      thesesGenerated: "Kasidu da Aka Ƙirƙira",
+      latestBarLive: "sandar baya-bayan nan ita ce bayanan kai tsaye akan sarkar",
+      monthsActive: "Watanni Masu Aiki",
+      exportFormatsLabel: "Tsarin Fitarwa",
+      revisionsLabel: "Gyare-gyare",
+    },
+    sw: {
+      tagline: "Wakala wa Utafiti Unaojitegemea",
+      heroBadge: "Akili ya kitaaluma inayotumia Stacks",
+      heroTitle: "Geuza vyanzo vya utafiti kuwa nafasi ya kazi ya tasnifu iliyokamilika.",
+      heroDesc: "ThesisAI inachanganya AI ya kasi ya Groq, uandishi unaozingatia manukuu, zana za kuhamisha, na ramani ya safu ya uthibitisho inayolindwa na Stacks ili wanafunzi waweze kuhama kutoka vyanzo ghafi kwenda kazi ya kitaaluma iliyopangwa bila kupotea.",
+      launchStudio: "Zindua Studio ya Utafiti",
+      connectStacks: "Chunguza Safu ya Stacks",
+      stacksNote: "Imejengwa kwa ramani ya usalama ya kiwango cha Stacks: chanzo cha utafiti kinachoweza kuthibitishwa, uthibitisho wa hashi ya nyaraka, na uthibitishaji wa baadaye kwenye mnyororo — bila kuvuruga mtiririko wako wa uandishi.",
+      aiModels: "Mtandao wa Mifano ya AI ya Groq",
+      aiModelsDesc: "Inaelekeza kazi za utafiti kupitia Llama 3.3 70B, Qwen3 32B, DeepSeek R1 Distill, na mifano ya akiba ya haraka kutoka kwa seva.",
+      sourceIngestion: "Uchukuaji wa Vyanzo",
+      sourceIngestionDesc: "Ongeza URL, bandika maandishi, au pakia nyaraka za PDF/TXT/MD kama msingi wa maarifa yenye mwongozo kabla ya kuunda.",
+      thesisWorkflow: "Mtiririko wa Kazi wa Tasnifu",
+      thesisWorkflowDesc: "Unda vichwa, miundo, sura, marejeleo, marekebisho, na uhamishaji katika nafasi moja ya kazi laini na inayojibu.",
+      stacksLayer: "Safu ya Uthibitisho ya Stacks",
+      stacksLayerDesc: "Imeundwa kwa uthibitisho wa utafiti wa baadaye, motisha za sBTC, na ujumuishaji wa mkataba wa busara wa Clarity kwenye Stacks.",
+      create: "Unda",
+      dashboard: "Dashibodi",
+      about: "Kuhusu",
+      signIn: "Ingia",
+      signOut: "Toka",
+      newThesis: "Tasnifu Mpya",
+      myLibrary: "Maktaba Yangu ya Utafiti",
+      manageDrafts: "Dhibiti rasimu za tasnifu zilizohifadhiwa na kazi ya utafiti.",
+      noSavedFound: "Hakuna Tasnifu Iliyohifadhiwa Iliyopatikana",
+      startGenerating: "Anza kuunda tasnifu na uihifadhi ili kuiona hapa katika maktaba yako binafsi.",
+      initiate: "Anzisha Uundaji",
+      openDraft: "Fungua Rasimu",
+      saveDraft: "Hifadhi Rasimu",
+      exportPptx: "Hamisha PPTX",
+      exportPdf: "Hamisha PDF",
+      regenerate: "Unda Upya Sura",
+      aboutTitle: "Kuhusu ThesisAI",
+      aboutDesc: "ThesisAI ni nafasi ya kazi ya utafiti inayojitegemea inayolingana na Stacks ambayo inageuza vyanzo vilivyotolewa na mtumiaji kuwa rasimu za kitaaluma zilizopangwa, wakati ikitayarisha bidhaa kwa chanzo cha nyaraka kinachoweza kuthibitishwa kwenye miundombinu inayolindwa na Stacks.",
+      disclaimerTitle: "Kanusho na Maadili",
+      disclaimerDesc: "Chombo hiki ni msaidizi wa AI. AI inaweza kuona ndoto au kutoa taarifa zisizo sahihi. Daima thibitisha ukweli na manukuu. ThesisAI inakusudiwa kusaidia, si kubadilisha, fikra makini. Itumie kwa uwajibikaji na uzingatie miongozo ya uadilifu wa kitaaluma ya taasisi yako.",
+      donationTitle: "Saidia Mradi Huu",
+      donationDesc: "Mradi huu unaendelezwa kwa kujitegemea ili kusaidia wanafunzi duniani kote. Ikiwa unaupata kuwa wa manufaa, fikiria kusaidia matengenezo na maendeleo zaidi.",
+      languageName: "Kiswahili",
+      saveConfirmation: "Tasnifu imehifadhiwa kwa mafanikio!",
+      loginRequirement: "Tafadhali ingia kwanza ili kuhifadhi maendeleo yako.",
+      revertConfirmation: "Una uhakika unataka kurudi kwenye toleo hili? Mabadiliko yoyote ambayo hayajahifadhiwa katika mwonekano wa sasa yatapotea.",
+      step1Title: "Msingi wa Maarifa",
+      step1Desc: "Pakia PDF, bandika URL, au weka maandishi ghafi ili kuongoza utafiti wa AI.",
+      addUrl: "Ongeza URL",
+      pasteText: "Bandika Maandishi",
+      configureTitle: "Boresha Matokeo",
+      major: "Taaluma ya Kitaaluma",
+      thesisLevel: "Kiwango cha Tasnifu",
+      writingStyle: "Mtindo wa Uandishi",
+      citationStyle: "Mtindo wa Manukuu",
+      generateFull: "Unda Tasnifu Kamili",
+      processing: "Inachakata...",
+      thesisTitle: "Kichwa cha Tasnifu (Hiari)",
+      titlePlaceholder: "Acha AI iamue au andika chako mwenyewe...",
+      generateTitles: "Unda Chaguo za Kichwa kutoka vyanzo",
+      antiPlagiarismDesc: "Inaeleza upya kwa kawaida ili kupunguza alama za mfanano.",
+      language: "Lugha Lengwa",
+      contentLength: "Urefu wa Maudhui",
+      fontProfile: "Wasifu wa Fonti",
+      antiPlagiarism: "Kupinga Wizi wa Kazi",
+      ctaBadge: "Tayari kwa Tasnifu",
+      ctaTitle: "Matokeo ya kiwango cha kitaaluma, chanzo cha utafiti kwenye mnyororo kinakuja.",
+      ctaDesc: "Ramani ya Stacks: thibitisha hashi za nyaraka za mwisho kwa Clarity, toa beji za wakaguzi, na ongeza motisha zinazolingana na sBTC kwa wachangiaji huku chanzo cha utafiti kinavyobadilika.",
+      ctaButton: "Anza Kuandika Sasa",
+      walletGuideTitle: "Jinsi ya Kuunganisha Pochi Yako",
+      walletGuideDesc: "Unganisha pochi yako ya Stacks ili kuangalia salio lako la $THESIS na kutoa Cheti chako cha Tasnifu kwenye mnyororo.",
+      walletGuideStep1: "Sakinisha kiendelezi cha pochi cha Leather au Xverse kwenye kivinjari chako",
+      walletGuideStep2: "Bofya kitufe cha \"Connect Stacks\" kwenye urambazaji wa juu",
+      walletGuideStep3: "Kubali ombi la muunganisho kwenye dirisha ibukizi la pochi yako",
+      walletGuideStep4: "Salio lako la $THESIS litaonekana kiotomatiki",
+      walletGuideMobile: "Kwenye simu, fungua tovuti hii ndani ya kivinjari cha ndani cha Leather au Xverse kwa ufikiaji wa pochi.",
+      walletGuideLeather: "Pata Pochi ya Leather",
+      walletGuideXverse: "Pata Pochi ya Xverse",
+      walletGuideLoginTitle: "Ingia ili Kufikia Dashibodi Yako",
+      walletGuideLoginDesc: "Ingia kwa Google ili kuhifadhi rasimu za tasnifu yako, kuona historia ya uundaji, na kudhibiti maktaba yako ya utafiti kwenye vifaa vyote.",
+      walletGuideLoginBtn: "Ingia kwa Google",
+      walletGuideOrHold: "Au shika tokeni 1,000 za $THESIS",
+      stakeTitle: "Fungua Ufikiaji Kamili",
+      stakeDesc: "Fungua vipengele vyote vya ThesisAI kwa kushika tokeni 1,000 za $THESIS kwenye pochi yako iliyounganishwa.",
+      stakeOption1: "Shika $THESIS 1,000",
+      stakeOption1Desc: "Shika angalau tokeni 1,000 za $THESIS kwenye pochi yako ya Stacks iliyounganishwa ili kufungua vipengele vyote kwa kudumu.",
+      stakeCheckBalance: "Angalia Salio Langu la $THESIS",
+
+      saveUnlimitedDrafts: "Hifadhi rasimu za tasnifu zisizo na kikomo kwenye maktaba yako",
+      accessGenHistory: "Fikia historia ya uundaji na masahihisho",
+      syncDevices: "Sawazisha kiotomatiki kwenye vifaa vyote",
+      viewCertificates: "Tazama na dhibiti vyeti vilivyotolewa",
+      signedInAsPrefix: "Umeingia kama",
+      accessGate: "Lango la Ufikiaji",
+      activeNow: "Inafanya Kazi Sasa",
+      connectWalletBtn: "Unganisha Pochi",
+      communityTraction: "Ushiriki wa Jamii",
+      researchersGenerating: "Watafiti tayari wanaunda.",
+      thesesGenerated: "Tasnifu Zilizoundwa",
+      latestBarLive: "upau wa hivi karibuni ni data ya moja kwa moja kwenye mnyororo",
+      monthsActive: "Miezi Inayofanya Kazi",
+      exportFormatsLabel: "Miundo ya Kuhamisha",
+      revisionsLabel: "Masahihisho",
     }
   };
 
@@ -416,12 +1879,31 @@ export default function App() {
 
   // Sync UI language toggle -> AI output language
   // Must be defined AFTER config state
-  const toggleLang = () => {
-    const nextLang = lang === 'en' ? 'id' : 'en';
-    setLang(nextLang);
+  const LANGUAGE_OPTIONS: { code: AppLanguage; nativeLabel: string; aiTargetName: string }[] = [
+    { code: 'en', nativeLabel: 'English', aiTargetName: 'English' },
+    { code: 'id', nativeLabel: 'Bahasa Indonesia', aiTargetName: 'Indonesian' },
+    { code: 'ms', nativeLabel: 'Bahasa Melayu', aiTargetName: 'Malay' },
+    { code: 'ar', nativeLabel: 'العربية', aiTargetName: 'Arabic' },
+    { code: 'es', nativeLabel: 'Español (Latin)', aiTargetName: 'Spanish' },
+    { code: 'pt', nativeLabel: 'Português (Latin)', aiTargetName: 'Portuguese' },
+    { code: 'ru', nativeLabel: 'Русский', aiTargetName: 'Russian' },
+    { code: 'fr', nativeLabel: 'Français', aiTargetName: 'French' },
+    { code: 'vi', nativeLabel: 'Tiếng Việt', aiTargetName: 'Vietnamese' },
+    { code: 'th', nativeLabel: 'ภาษาไทย', aiTargetName: 'Thai' },
+    { code: 'hi', nativeLabel: 'हिन्दी', aiTargetName: 'Hindi' },
+    { code: 'fa', nativeLabel: 'فارسی', aiTargetName: 'Persian' },
+    { code: 'ja', nativeLabel: '日本語', aiTargetName: 'Japanese' },
+    { code: 'ko', nativeLabel: '한국어', aiTargetName: 'Korean' },
+    { code: 'ha', nativeLabel: 'Hausa', aiTargetName: 'Hausa' },
+    { code: 'sw', nativeLabel: 'Kiswahili', aiTargetName: 'Swahili' },
+  ];
+
+  const setAppLanguage = (code: AppLanguage) => {
+    setLang(code);
+    const option = LANGUAGE_OPTIONS.find((o) => o.code === code);
     setConfig(prev => ({
       ...prev,
-      targetLanguage: nextLang === 'id' ? 'Indonesian' : 'English',
+      targetLanguage: option?.aiTargetName || 'English',
     }));
   };
 
@@ -755,16 +2237,22 @@ export default function App() {
     if (!structure) return;
     const md = getThesisMarkdown();
     try {
-      const response = await axios.post('/api/export-docx', { markdown: md, title: structure.title }, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // Uses the base64 JSON endpoint (not blob) because many in-app wallet
+      // browsers (Xverse, Leather) run a webview that can't resolve blob:
+      // URLs created by URL.createObjectURL - clicking the download link
+      // there silently does nothing. A data: URI built from base64 and
+      // navigated to directly works in both normal browsers and webviews.
+      const response = await axios.post('/api/export-docx-base64', { markdown: md, title: structure.title });
+      const { base64, filename, mimeType } = response.data;
+      const dataUri = `data:${mimeType};base64,${base64}`;
       const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${structure.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`);
+      link.href = dataUri;
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
     } catch (e: any) {
-      alert("Failed to export DOCX: " + e.message);
+      alert("Failed to export DOCX: " + (e?.response?.data?.error || e.message));
     }
   };
 
@@ -857,7 +2345,19 @@ export default function App() {
         pagebreak: { mode: ['css', 'legacy'] }
       };
 
-      await html2pdf().from(container).set(opt).save();
+      // .save() internally uses URL.createObjectURL, which many in-app
+      // wallet browsers (Xverse, Leather) run in a webview that can't
+      // resolve - the download silently does nothing there. Generating a
+      // base64 data URI instead and navigating an <a download> link to it
+      // works in both normal browsers and those webviews.
+      const pdfInstance = await html2pdf().from(container).set(opt).toPdf().get('pdf');
+      const dataUri = pdfInstance.output('datauristring');
+      const link = document.createElement('a');
+      link.href = dataUri;
+      link.setAttribute('download', `${titleSafe}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
       document.body.removeChild(container);
     } catch (e: any) {
       alert("Failed to export PDF: " + e.message);
@@ -886,16 +2386,26 @@ export default function App() {
       text: `Check out my research generated by ThesisAI: ${structure.title}`,
       url: window.location.href,
     };
-    try {
-      if (navigator.share) {
+    // Many in-app wallet browsers (Xverse, Leather) run a webview that does
+    // not implement the Web Share API at all, so navigator.share can be
+    // undefined there. Fall back to copying the link instead of doing
+    // nothing silently.
+    if (navigator.share) {
+      try {
         await navigator.share(shareData);
-      } else {
-        console.log("Sharing not supported on this browser.");
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return; // user cancelled the native share sheet
+        // Any other failure (including "not supported" on some webviews
+        // that define navigator.share but throw when called) falls through
+        // to the clipboard fallback below.
       }
-    } catch (err: any) {
-      if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
-        console.error("Error sharing:", err);
-      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareData.url);
+      alert('Link copied to clipboard (sharing isn\'t supported in this browser).');
+    } catch {
+      alert(`Copy this link to share: ${shareData.url}`);
     }
   };
 
@@ -966,7 +2476,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0d10] font-sans text-[#f0f1f3] pb-20">
+    <div dir={lang === 'ar' || lang === 'fa' ? 'rtl' : 'ltr'} className="min-h-screen bg-[#0c0d10] font-sans text-[#f0f1f3] pb-20">
       <AnimatePresence>
         {showAbout && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#0c0d10]/95 backdrop-blur-md" onClick={() => setShowAbout(false)}>
@@ -1051,14 +2561,7 @@ export default function App() {
 
           {/* Right: Desktop nav */}
           <div className="hidden sm:flex items-center gap-2 lg:gap-4">
-            <button
-              onClick={toggleLang}
-              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] px-3 py-1.5 rounded-lg border border-[#1f2128] text-[#4a4b4e] hover:text-[#b59a6d] hover:border-[#b59a6d]/30 transition"
-              title={lang === 'en' ? 'Switch to Indonesian' : 'Switch to English'}
-            >
-              <Languages className="w-3 h-3" />
-              <span>{lang === 'en' ? 'EN' : 'ID'}</span>
-            </button>
+            <LanguageSwitcher current={lang} options={LANGUAGE_OPTIONS} onSelect={(code) => setAppLanguage(code as AppLanguage)} variant="compact" />
             <button onClick={() => setShowAbout(true)} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#4a4b4e] hover:text-[#b59a6d] transition mr-2">
               <Info className="w-3.5 h-3.5" />
               <span>{t('about')}</span>
@@ -1108,15 +2611,34 @@ export default function App() {
           </div>
 
           {/* Right: Mobile — wallet icon + hamburger */}
-          <div className="flex sm:hidden items-center gap-2">
+          <div className="flex sm:hidden items-center gap-1.5">
             {stacksWallet.isConnected && stacksWallet.address ? (
-              <button
-                onClick={() => stacksWallet.disconnectWallet().catch(() => undefined)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 text-[10px] font-black uppercase tracking-wider text-green-400"
-              >
-                <Wallet className="w-3.5 h-3.5" />
-                <span>{stacksWallet.address.slice(0, 4)}..{stacksWallet.address.slice(-4)}</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setShowMobileDisconnect((v) => !v)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 text-[10px] font-black uppercase tracking-wider text-green-400"
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>{stacksWallet.address.slice(0, 4)}..{stacksWallet.address.slice(-4)}</span>
+                </button>
+                <AnimatePresence>
+                  {showMobileDisconnect && (
+                    <motion.button
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      onClick={() => {
+                        stacksWallet.disconnectWallet().catch(() => undefined);
+                        setShowMobileDisconnect(false);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-[9px] font-black uppercase tracking-wider text-red-400 whitespace-nowrap overflow-hidden"
+                    >
+                      <LogOut className="w-3 h-3 shrink-0" />
+                      Disconnect
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </>
             ) : (
               <button
                 onClick={() => stacksWallet.connectWallet().catch(() => undefined)}
@@ -1150,9 +2672,7 @@ export default function App() {
                 <button onClick={() => { setShowAbout(true); setMobileMenuOpen(false); }} className="flex items-center gap-3 px-3 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] hover:text-[#f0f1f3] hover:bg-[#111318] transition text-left">
                   <Info className="w-4 h-4" /> {t('about')}
                 </button>
-                <button onClick={toggleLang} className="flex items-center gap-3 px-3 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] hover:text-[#b59a6d] hover:bg-[#111318] transition text-left">
-                  <Languages className="w-4 h-4" /> {lang === 'en' ? 'Switch to Indonesian' : 'Switch to English'}
-                </button>
+                <LanguageSwitcher current={lang} options={LANGUAGE_OPTIONS} onSelect={(code) => setAppLanguage(code as AppLanguage)} variant="full" />
                 {user && (
                   <>
                     <button onClick={() => { setView('generator'); setMobileMenuOpen(false); }} className={cn("flex items-center gap-3 px-3 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition text-left", view === 'generator' ? "text-[#b59a6d] bg-[#b59a6d]/10" : "text-[#9ca3af] hover:text-[#f0f1f3] hover:bg-[#111318]")}>
@@ -1429,10 +2949,10 @@ export default function App() {
                       <p className="text-sm text-[#8a7a6a] leading-6">{t('walletGuideLoginDesc')}</p>
                       <div className="space-y-3 pt-2">
                         {[
-                          lang === 'en' ? 'Save unlimited thesis drafts to your library' : 'Simpan draf tesis tak terbatas ke perpustakaanmu',
-                          lang === 'en' ? 'Access generation history & revisions' : 'Akses riwayat generasi & revisi',
-                          lang === 'en' ? 'Sync across devices automatically' : 'Sinkronisasi otomatis di semua perangkat',
-                          lang === 'en' ? 'View & manage minted certificates' : 'Lihat & kelola sertifikat yang dicetak',
+                          t('saveUnlimitedDrafts'),
+                          t('accessGenHistory'),
+                          t('syncDevices'),
+                          t('viewCertificates'),
                         ].map((feat, i) => (
                           <div key={i} className="flex items-center gap-3">
                             <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
@@ -1448,7 +2968,7 @@ export default function App() {
                       ) : (
                         <div className="mt-4 inline-flex items-center gap-3 px-4 py-2 rounded-xl border border-green-500/30 bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-wider">
                           <CheckCircle className="w-3.5 h-3.5" />
-                          {lang === 'en' ? `Signed in as ${user.displayName || user.email}` : `Masuk sebagai ${user.displayName || user.email}`}
+                          {t('signedInAsPrefix')} {user.displayName || user.email}
                         </div>
                       )}
                     </div>
@@ -1463,7 +2983,7 @@ export default function App() {
                   <div className="text-center space-y-3">
                     <div className="inline-flex items-center gap-2 rounded-full border border-[#a3c4bc]/25 bg-[#a3c4bc]/8 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.25em] text-[#a3c4bc]">
                       <Lock className="h-3 w-3" />
-                      {lang === 'en' ? 'Access Gate' : 'Gerbang Akses'}
+                      {t('accessGate')}
                     </div>
                     <h3 className="text-2xl lg:text-3xl font-black text-white tracking-tight">{t('stakeTitle')}</h3>
                     <p className="text-sm text-[#8a7a6a] max-w-xl mx-auto leading-6">{t('stakeDesc')}</p>
@@ -1476,11 +2996,11 @@ export default function App() {
                         desc: t('stakeOption1Desc'),
                         icon: Wallet,
                         accent: '#f4c95d',
-                        badge: lang === 'en' ? 'Active Now' : 'Aktif Sekarang',
+                        badge: t('activeNow'),
                         action: () => stacksWallet.isConnected ? null : stacksWallet.connectWallet().catch(() => undefined),
                         actionLabel: stacksWallet.isConnected
                           ? `${stacksWallet.thesisBalance.toLocaleString()} $THESIS`
-                          : lang === 'en' ? 'Connect Wallet' : 'Hubungkan Dompet',
+                          : t('connectWalletBtn'),
                         available: true,
                       },
                     ].map(({ title, desc, icon: Icon, accent, badge, action, actionLabel, available }) => (
@@ -1558,10 +3078,10 @@ export default function App() {
                   <div className="mb-10 text-center space-y-3">
                     <div className="inline-flex items-center gap-2 rounded-full border border-[#b59a6d]/25 bg-[#b59a6d]/8 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.25em] text-[#b59a6d]">
                       <GraduationCap className="h-3 w-3" />
-                      {lang === 'en' ? 'Community Traction' : 'Adopsi Komunitas'}
+                      {t('communityTraction')}
                     </div>
                     <h3 className="text-2xl lg:text-3xl font-black text-white tracking-tight">
-                      {lang === 'en' ? 'Researchers are already generating.' : 'Para peneliti sudah mulai membuat.'}
+                      {t('researchersGenerating')}
                     </h3>
                     <p className="text-sm text-[#8a7a6a] max-w-lg mx-auto leading-6">
                       {lang === 'en'
@@ -1580,7 +3100,7 @@ export default function App() {
                         <div className="flex items-center gap-2 mt-1">
                           <div className="w-2.5 h-2.5 rounded-full bg-[#b59a6d]" />
                           <p className="text-[10px] font-bold uppercase tracking-widest text-[#4a4b4e]">
-                            {lang === 'en' ? 'Theses Generated' : 'Tesis Dihasilkan'}
+                            {t('thesesGenerated')}
                           </p>
                         </div>
                       </div>
@@ -1621,16 +3141,16 @@ export default function App() {
                       })()}
                     </div>
                     <p className="text-[9px] text-[#3a3d45] font-mono mt-3">
-                      2025 – {lang === 'en' ? 'Jun' : 'Jun'} 2026 · {lang === 'en' ? 'latest bar is live on-chain data' : 'bilah terakhir data on-chain langsung'}
+                      2025 – Jun 2026 · {t('latestBarLive')}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { val: anchoredThesesCount !== null ? anchoredThesesCount.toLocaleString() : '—', label: lang === 'en' ? 'Theses Anchored On-Chain' : 'Tesis Tertambat On-Chain', icon: GraduationCap },
-                      { val: '7', label: lang === 'en' ? 'Months Active' : 'Bulan Aktif', icon: Clock },
-                      { val: '4', label: lang === 'en' ? 'Export Formats' : 'Format Ekspor', icon: Download },
-                      { val: '∞', label: lang === 'en' ? 'Revisions' : 'Revisi', icon: RotateCcw },
+                      { val: anchoredThesesCount !== null ? anchoredThesesCount.toLocaleString() : '—', label: t('thesesGenerated'), icon: GraduationCap },
+                      { val: '7', label: t('monthsActive'), icon: Clock },
+                      { val: '4', label: t('exportFormatsLabel'), icon: Download },
+                      { val: '∞', label: t('revisionsLabel'), icon: RotateCcw },
                     ].map(({ val, label, icon: Icon }) => (
                       <div key={label} className="rounded-2xl border border-[#b59a6d]/15 bg-[#b59a6d]/[0.04] p-4 text-center">
                         <Icon className="w-4 h-4 text-[#b59a6d]/60 mx-auto mb-2" />
@@ -1827,10 +3347,9 @@ export default function App() {
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#4a4b4e] ml-1">{t('language')}</label>
                         <select value={config.targetLanguage} onChange={e => setConfig({...config, targetLanguage: e.target.value})} className="w-full bg-[#0c0d10] border border-[#1f2128] rounded-xl px-4 py-3.5 text-sm focus:border-[#b59a6d] outline-none">
-                          <option value="English">English</option>
-                          <option value="Indonesian">Indonesian (Bahasa Indonesia)</option>
-                          <option value="Malay">Malay (Bahasa Melayu)</option>
-                          <option value="Arabic">Arabic (العربية)</option>
+                          {LANGUAGE_OPTIONS.map((opt) => (
+                            <option key={opt.code} value={opt.aiTargetName}>{opt.aiTargetName} ({opt.nativeLabel})</option>
+                          ))}
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -2168,45 +3687,14 @@ export default function App() {
           @stacks/connect wallet selector directly on click, with no
           intermediate custom modal in between. */}
 
-      {/* Footer — includes $THESIS token stats + Suggest Feature */}
+      {/* Footer — includes Suggest Feature */}
       <footer className="w-full border-t border-[#1f2128] bg-[#0c0d10] mt-8">
-        {/* Token Stats Row — only on landing page, Supply + Your Balance only */}
-        {view === 'landing' && (
-          <div className="max-w-7xl mx-auto px-4 lg:px-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              {
-                label: 'Supply',
-                value: '999,000,000',
-                sub: '$THESIS · Total supply · Stacks mainnet',
-              },
-              {
-                label: 'Your Balance',
-                value: stacksWallet.isConnected
-                  ? stacksWallet.thesisBalance.toLocaleString() + ' $THESIS'
-                  : '—',
-                sub: stacksWallet.isConnected
-                  ? lang === 'en' ? 'Your $THESIS token holdings' : 'Kepemilikan token $THESIS kamu'
-                  : lang === 'en' ? 'Connect wallet to see your balance' : 'Hubungkan wallet untuk lihat saldo',
-              },
-            ].map(({ label, value, sub }) => (
-              <div
-                key={label}
-                className="group relative overflow-hidden rounded-2xl border border-[#f4c95d]/15 bg-[#f4c95d]/[0.03] p-5 hover:border-[#f4c95d]/40 transition-all"
-              >
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#f4c95d]/5 blur-2xl rounded-full" />
-                <p className="text-2xl font-black text-[#f4c95d] tracking-tight">{value}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#f4c95d]/60 mt-0.5">{label}</p>
-                <p className="text-[9px] text-[#3a3d45] mt-1 font-mono">{sub}</p>
-              </div>
-            ))}
-          </div>
-        )}
         {/* Footer bottom bar */}
         <div className="border-t border-[#1a1c22] py-5 px-4">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
               <div className="text-[10px] text-[#4a4b4e] font-sans tracking-widest uppercase">Built on the Stacks Layer for verifiable research provenance</div>
-              <div className="text-[10px] text-[#3a3d45] mt-0.5 font-mono">ThesisAI Service ID 8004 • © 2026</div>
+              <div className="text-[10px] text-[#3a3d45] mt-0.5 font-mono">ThesisAI Research Agent • © 2026</div>
             </div>
             <a
               href="mailto:0xward.dev@gmail.com?subject=ThesisAI%20Feedback&body=Hi%2C%20I%20have%20a%20suggestion%20for%20ThesisAI%3A%0A%0A"

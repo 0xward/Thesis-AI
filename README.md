@@ -39,8 +39,10 @@ ThesisAI is a full-stack Web3 academic research platform built on the **Stacks b
 - Revisions saved with timestamps
 
 ### Multilingual UI
-- Interface available in **English** and **Bahasa Indonesia**
-- Thesis output can target any language (English, Indonesian, Malay, Arabic, and more)
+- Interface available in 16 languages, each rendered in its native script: English, Bahasa Indonesia, Bahasa Melayu, العربية (Arabic), Español, Português, Русский (Russian), Français, Tiếng Việt, ภาษาไทย (Thai), हिन्दी (Hindi), فارسی (Persian), 日本語 (Japanese), 한국어 (Korean), Hausa, and Kiswahili
+- The entire UI (landing page, dashboard, forms, navigation) switches language instantly via the language selector, except the footer
+- Right-to-left layout is applied automatically for Arabic and Persian
+- Thesis output can independently target any of the same 16 languages, regardless of the UI language
 
 ---
 
@@ -315,7 +317,7 @@ For deploying the Clarity contracts themselves (not the web app), see `DEPLOY_TE
 - [x] Clarity smart contract: NFT certificate v1 to v2 migration, access-control bug fixed
 - [x] Clarity smart contract: thesis-review peer-review attestations (live on mainnet)
 - [x] Verify Thesis - public, walletless on-chain lookup page
-- [x] Multilingual UI (English / Bahasa Indonesia)
+- [x] Multilingual UI (16 languages: EN, ID, MS, AR, ES, PT, RU, FR, VI, TH, HI, FA, JA, KO, HA, SW)
 - [ ] sBTC incentive layer
 - [ ] Governance voting via $THESIS
 
