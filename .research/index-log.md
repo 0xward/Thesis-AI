@@ -552,3 +552,165 @@
 - Stacks anchor block: `8372733`
 - Source index verified: `2026-06-22`
 - Citation layer: Stacks mainnet
+
+## 2026-06-23T10:26:25Z
+
+- Stacks anchor block: `8377522`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T12:34:04Z
+
+- Stacks anchor block: `8378494`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T14:00:03Z
+
+- Stacks anchor block: `8379148`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T15:42:40Z
+
+- Stacks anchor block: `8379888`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T17:48:53Z
+
+- Stacks anchor block: `8380724`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T19:24:26Z
+
+- Stacks anchor block: `8381372`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T20:57:16Z
+
+- Stacks anchor block: `8381953`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T21:55:29Z
+
+- Stacks anchor block: `8382358`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-23T22:58:52Z
+
+- Stacks anchor block: `8382806`
+- Source index verified: `2026-06-23`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T11:21:43Z
+
+- Stacks anchor block: `8387494`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T12:20:17Z
+
+- Stacks anchor block: `8387853`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T15:28:20Z
+
+- Stacks anchor block: `8388743`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T16:36:31Z
+
+- Stacks anchor block: `8389077`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T17:50:40Z
+
+- Stacks anchor block: `8389343`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T19:09:05Z
+
+- Stacks anchor block: `8389799`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T20:24:32Z
+
+- Stacks anchor block: `8390171`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T21:52:43Z
+
+- Stacks anchor block: `8390671`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-24T22:58:46Z
+
+- Stacks anchor block: `8391120`
+- Source index verified: `2026-06-24`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T10:00:21Z
+
+- Stacks anchor block: `8395094`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T11:12:23Z
+
+- Stacks anchor block: `8395548`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T12:22:53Z
+
+- Stacks anchor block: `8395930`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T13:37:21Z
+
+- Stacks anchor block: `8396392`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T15:35:24Z
+
+- Stacks anchor block: `8397092`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T18:06:42Z
+
+- Stacks anchor block: `8398099`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T19:23:10Z
+
+- Stacks anchor block: `8398556`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T22:00:00Z
+
+- Stacks anchor block: `8399430`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
+
+## 2026-06-25T23:07:11Z
+
+- Stacks anchor block: `8399821`
+- Source index verified: `2026-06-25`
+- Citation layer: Stacks mainnet
