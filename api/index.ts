@@ -10,10 +10,28 @@ const axios = (require('axios') as typeof import('axios')).default ?? require('a
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const cheerio = require('cheerio') as typeof import('cheerio');
 
+/**
+ * Loads an ESM-only package (like `marked`, which has no CommonJS build at
+ * all) from this CommonJS-compiled file.
+ *
+ * Using `await import(...)` directly does NOT work here: TypeScript's
+ * CommonJS module target silently rewrites dynamic `import()` calls back
+ * into `require()` calls during compilation (a known TS limitation, see
+ * microsoft/TypeScript#43329), which then crashes at runtime with
+ * "ERR_REQUIRE_ESM" since require() cannot load an ESM-only module.
+ *
+ * Wrapping the import inside `new Function(...)` hides the import() call
+ * from TypeScript's static analysis entirely (it's just a string literal
+ * to the compiler), so it survives compilation as a real, un-rewritten
+ * dynamic import and works correctly at runtime. This is the same
+ * technique used by Oclif/Salesforce's CLI framework for the same reason.
+ */
+const dynamicImport = new Function('modulePath', 'return import(modulePath)') as (modulePath: string) => Promise<any>;
+
 // ─── PDF helper ───────────────────────────────────────────────────────────────
 async function parsePdfBuffer(buffer: Buffer) {
   try {
-    const pdfImport = await import('pdf-parse');
+    const pdfImport = await dynamicImport('pdf-parse');
     const pdf = (pdfImport as any).default || pdfImport;
     const data = await (pdf as any)(buffer);
     return data.text || '';
@@ -161,15 +179,46 @@ const LANGUAGE_DISAMBIGUATION: Record<string, string> = {
     'Do not write in Indonesian. Use Malaysian/Brunei vocabulary and spelling conventions ' +
     '(e.g. "kerajaan" not "pemerintah" for government in some contexts, "pejabat" spelling conventions, ' +
     'and standard Malaysian academic register), not Indonesian ones.',
+  Japanese:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Japanese script - a mix of Kanji, Hiragana, and Katakana as ' +
+    'a native Japanese academic text would use. Do NOT write in romaji (Latin-letter transliteration of Japanese ' +
+    'sounds, e.g. "Web3 wa intaanetto no..."). Romaji is NOT Japanese text and is unacceptable for this output.',
+  Korean:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Hangul script (한글), as a native Korean academic text would. ' +
+    'Do NOT write in Revised Romanization or any other Latin-letter transliteration of Korean sounds. ' +
+    'Romanized Korean is NOT Korean text and is unacceptable for this output.',
+  Arabic:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Arabic script (العربية), right-to-left, as a native Arabic ' +
+    'academic text would. Do NOT write in Latin-letter transliteration ("Arabizi" / "Franco-Arabic"). ' +
+    'Transliterated Arabic is NOT Arabic text and is unacceptable for this output.',
+  Persian:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Persian (Farsi) script (فارسی), right-to-left, as a native ' +
+    'Persian academic text would. Do NOT write in Latin-letter transliteration ("Finglish"). ' +
+    'Transliterated Persian is NOT Persian text and is unacceptable for this output.',
+  Hindi:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Devanagari script (देवनागरी), as a native Hindi academic ' +
+    'text would. Do NOT write in romanized Hindi ("Hinglish" in Latin letters). ' +
+    'Romanized Hindi is NOT Hindi text and is unacceptable for this output.',
+  Thai:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Thai script (ภาษาไทย), as a native Thai academic text would. ' +
+    'Do NOT write in romanized/transliterated Thai using Latin letters. ' +
+    'Romanized Thai is NOT Thai text and is unacceptable for this output.',
+  Russian:
+    'CRITICAL SCRIPT REQUIREMENT: Write using actual Cyrillic script (Русский), as a native Russian academic ' +
+    'text would. Do NOT write in romanized/transliterated Russian using Latin letters. ' +
+    'Romanized Russian is NOT Russian text and is unacceptable for this output.',
+  Vietnamese:
+    'Write using standard Vietnamese orthography with full diacritical marks (e.g. "Tiếng Việt", not "Tieng Viet" ' +
+    'with marks stripped). Vietnamese without its diacritics changes word meaning and is considered incorrect.',
 };
 
 function thesisSystemPrompt(targetLanguage = 'English') {
   const disambiguation = LANGUAGE_DISAMBIGUATION[targetLanguage] ? `\n${LANGUAGE_DISAMBIGUATION[targetLanguage]}` : '';
-  return `You are ThesisAI, an expert academic writing assistant. You MUST write your entire response in ${targetLanguage} - every heading, every sentence, every word.${disambiguation}
+  return `You are ThesisAI, an expert academic writing assistant. You MUST write your entire response in ${targetLanguage} - every heading, every sentence, every word - using that language's own native writing script, never a romanized or transliterated version of it.${disambiguation}
 CRITICAL RULES:
 - NEVER invent citations, authors, or publication data.
 - STRICTLY NO [Source X] tags. Use (Author, Year) format only.
-- The ENTIRE response must be in ${targetLanguage}, with no exceptions, regardless of what language the source material is written in.`;
+- The ENTIRE response must be in ${targetLanguage} using its native script, with no exceptions, regardless of what language or script the source material is written in.`;
 }
 
 function sourceBlock(sources: any[], limit = 50000) {
@@ -630,8 +679,8 @@ Rules:
         let extractedText = '';
         let extractedTitle = '';
         try {
-          const { JSDOM } = await import('jsdom');
-          const { Readability } = await import('@mozilla/readability');
+          const { JSDOM } = await dynamicImport('jsdom');
+          const { Readability } = await dynamicImport('@mozilla/readability');
           const dom = new JSDOM(html, { url: pageUrl });
           extractedTitle = dom.window.document.title || '';
           const reader = new Readability(dom.window.document, { charThreshold: 50 });
@@ -882,8 +931,8 @@ Rules:
       const { markdown, title } = req.body;
       if (!markdown) return res.status(400).json({ error: 'Markdown content is required' });
 
-      const { marked } = await import('marked');
-      const htmlToDocxModule = await import('html-to-docx');
+      const { marked } = await dynamicImport('marked');
+      const htmlToDocxModule = await dynamicImport('html-to-docx');
       const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
       const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
 
@@ -928,8 +977,8 @@ Rules:
       const { markdown, title } = req.body;
       if (!markdown) return res.status(400).json({ error: 'Markdown content is required' });
 
-      const { marked } = await import('marked');
-      const htmlToDocxModule = await import('html-to-docx');
+      const { marked } = await dynamicImport('marked');
+      const htmlToDocxModule = await dynamicImport('html-to-docx');
       const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
       const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
       if (!generator) throw new Error('HTMLToDOCX module not found');

@@ -27,6 +27,59 @@ interface Revision {
   generatedThesis: { chapterTitle: string, content: string }[];
 }
 
+// ── Local autosave (separate from Firestore's explicit "Save Draft") ──────────
+// Protects against losing in-progress work to an accidental refresh or tab
+// close. This is NOT a substitute for signing in and saving a draft -- it's
+// cleared on logout/account switch by resetWorkspace() (see there for why),
+// and it only ever holds the current browser tab's in-progress session, not
+// a permanent library entry.
+const AUTOSAVE_KEY = 'thesisai_workspace_autosave_v1';
+
+type AutosavedWorkspace = {
+  sources: ResearchSource[];
+  urlInput: string;
+  textInput: string;
+  titleInput: string;
+  structure: ThesisStructure | null;
+  generatedThesis: { chapterTitle: string; content: string }[];
+  config: ThesisConfig;
+  savedAt: number;
+};
+
+function saveAutosavedWorkspace(data: Omit<AutosavedWorkspace, 'savedAt'>) {
+  try {
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
+  } catch {
+    // localStorage can throw in private browsing / storage-full edge cases;
+    // autosave is a convenience, not a guarantee, so fail silently.
+  }
+}
+
+function loadAutosavedWorkspace(): AutosavedWorkspace | null {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AutosavedWorkspace;
+    // Discard anything older than 7 days -- an autosave that old is more
+    // likely to confuse someone than help them.
+    if (Date.now() - parsed.savedAt > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(AUTOSAVE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearAutosavedWorkspace() {
+  try {
+    localStorage.removeItem(AUTOSAVE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export default function App() {
   const stacksWallet = useStacksWallet();
   type AppLanguage = 'en' | 'id' | 'ms' | 'ar' | 'es' | 'pt' | 'ru' | 'fr' | 'vi' | 'th' | 'hi' | 'fa' | 'ja' | 'ko' | 'ha' | 'sw';
@@ -201,6 +254,7 @@ export default function App() {
     setAnchorTxid(null);
     setMintTxid(null);
     setIsFinished(false);
+    clearAutosavedWorkspace();
   };
 
   const t = (key: keyof typeof translations['en']) => {
@@ -309,6 +363,7 @@ export default function App() {
       monthsActive: "Months Active",
       exportFormatsLabel: "Export Formats",
       revisionsLabel: "Revisions",
+      availableLanguagesHint: "Available in 16 languages - tap to switch",
     },
     id: {
       tagline: "Agen Riset Otonom",
@@ -410,6 +465,7 @@ export default function App() {
       monthsActive: "Bulan Aktif",
       exportFormatsLabel: "Format Ekspor",
       revisionsLabel: "Revisi",
+      availableLanguagesHint: "Tersedia dalam 16 bahasa - ketuk untuk beralih",
     },
     ms: {
       tagline: "Agen Penyelidikan Autonomi",
@@ -510,6 +566,7 @@ export default function App() {
       monthsActive: "Bulan Aktif",
       exportFormatsLabel: "Format Eksport",
       revisionsLabel: "Semakan",
+      availableLanguagesHint: "Tersedia dalam 16 bahasa - sentuh untuk tukar",
     },
     ar: {
       tagline: "وكيل بحث مستقل",
@@ -610,6 +667,7 @@ export default function App() {
       monthsActive: "شهور النشاط",
       exportFormatsLabel: "صيغ التصدير",
       revisionsLabel: "المراجعات",
+      availableLanguagesHint: "متوفر بـ 16 لغة - اضغط للتبديل",
     },
     es: {
       tagline: "Agente de Investigación Autónomo",
@@ -710,6 +768,7 @@ export default function App() {
       monthsActive: "Meses Activos",
       exportFormatsLabel: "Formatos de Exportación",
       revisionsLabel: "Revisiones",
+      availableLanguagesHint: "Disponible en 16 idiomas - toca para cambiar",
     },
     pt: {
       tagline: "Agente de Pesquisa Autônomo",
@@ -810,6 +869,7 @@ export default function App() {
       monthsActive: "Meses Ativos",
       exportFormatsLabel: "Formatos de Exportação",
       revisionsLabel: "Revisões",
+      availableLanguagesHint: "Disponível em 16 idiomas - toque para mudar",
     },
     ru: {
       tagline: "Автономный исследовательский агент",
@@ -910,6 +970,7 @@ export default function App() {
       monthsActive: "Месяцев Активности",
       exportFormatsLabel: "Форматы Экспорта",
       revisionsLabel: "Исправления",
+      availableLanguagesHint: "Доступно на 16 языках - нажмите для переключения",
     },
     fr: {
       tagline: "Agent de Recherche Autonome",
@@ -1010,6 +1071,7 @@ export default function App() {
       monthsActive: "Mois Actifs",
       exportFormatsLabel: "Formats d'Exportation",
       revisionsLabel: "Révisions",
+      availableLanguagesHint: "Disponible en 16 langues - appuyez pour changer",
     },
     vi: {
       tagline: "Tác Nhân Nghiên Cứu Tự Động",
@@ -1110,6 +1172,7 @@ export default function App() {
       monthsActive: "Tháng Hoạt Động",
       exportFormatsLabel: "Định Dạng Xuất",
       revisionsLabel: "Sửa Đổi",
+      availableLanguagesHint: "Có sẵn 16 ngôn ngữ - nhấn để chuyển đổi",
     },
     th: {
       tagline: "ตัวแทนวิจัยอัตโนมัติ",
@@ -1210,6 +1273,7 @@ export default function App() {
       monthsActive: "เดือนที่ใช้งาน",
       exportFormatsLabel: "รูปแบบการส่งออก",
       revisionsLabel: "การแก้ไข",
+      availableLanguagesHint: "มีให้เลือก 16 ภาษา - แตะเพื่อเปลี่ยน",
     },
     hi: {
       tagline: "स्वायत्त शोध एजेंट",
@@ -1310,6 +1374,7 @@ export default function App() {
       monthsActive: "सक्रिय महीने",
       exportFormatsLabel: "निर्यात प्रारूप",
       revisionsLabel: "संशोधन",
+      availableLanguagesHint: "16 भाषाओं में उपलब्ध - बदलने के लिए टैप करें",
     },
     fa: {
       tagline: "عامل پژوهش خودکار",
@@ -1410,6 +1475,7 @@ export default function App() {
       monthsActive: "ماه‌های فعالیت",
       exportFormatsLabel: "فرمت‌های خروجی",
       revisionsLabel: "بازنگری‌ها",
+      availableLanguagesHint: "به ۱۶ زبان موجود است - برای تغییر ضربه بزنید",
     },
     ja: {
       tagline: "自律研究エージェント",
@@ -1510,6 +1576,7 @@ export default function App() {
       monthsActive: "活動月数",
       exportFormatsLabel: "エクスポート形式",
       revisionsLabel: "改訂",
+      availableLanguagesHint: "16言語対応 - タップして切り替え",
     },
     ko: {
       tagline: "자율 연구 에이전트",
@@ -1610,6 +1677,7 @@ export default function App() {
       monthsActive: "활동 월수",
       exportFormatsLabel: "내보내기 형식",
       revisionsLabel: "수정 사항",
+      availableLanguagesHint: "16개 언어 지원 - 탭하여 전환",
     },
     ha: {
       tagline: "Wakilin Bincike Mai Cin Gashin Kansa",
@@ -1710,6 +1778,7 @@ export default function App() {
       monthsActive: "Watanni Masu Aiki",
       exportFormatsLabel: "Tsarin Fitarwa",
       revisionsLabel: "Gyare-gyare",
+      availableLanguagesHint: "Akwai harsuna 16 - taɓa don canza",
     },
     sw: {
       tagline: "Wakala wa Utafiti Unaojitegemea",
@@ -1810,6 +1879,7 @@ export default function App() {
       monthsActive: "Miezi Inayofanya Kazi",
       exportFormatsLabel: "Miundo ya Kuhamisha",
       revisionsLabel: "Masahihisho",
+      availableLanguagesHint: "Inapatikana katika lugha 16 - gusa kubadilisha",
     }
   };
 
@@ -1915,6 +1985,42 @@ export default function App() {
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Input, 2: Generating Structure, 3: Generating Content & Done
   const [structure, setStructure] = useState<ThesisStructure | null>(null);
   const [generatedThesis, setGeneratedThesis] = useState<{ chapterTitle: string, content: string }[]>([]);
+
+  // Auto-save the in-progress workspace to localStorage (debounced) so an
+  // accidental refresh or tab close doesn't lose unsaved work. This is
+  // separate from the explicit Firestore "Save Draft" action -- it only
+  // covers the current browser session and is cleared on logout/account
+  // switch by resetWorkspace().
+  useEffect(() => {
+    const hasContent = sources.length > 0 || structure !== null || generatedThesis.length > 0 || textInput.trim() !== '';
+    if (!hasContent) return;
+    const timer = window.setTimeout(() => {
+      saveAutosavedWorkspace({ sources, urlInput, textInput, titleInput, structure, generatedThesis, config });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [sources, urlInput, textInput, titleInput, structure, generatedThesis, config]);
+
+  // Restore an autosaved workspace once on mount, if one exists and the
+  // current workspace is still empty (so it never overwrites a workspace
+  // already in progress, e.g. from a loaded saved draft).
+  useEffect(() => {
+    const saved = loadAutosavedWorkspace();
+    if (!saved) return;
+    const hasSavedContent = saved.sources.length > 0 || saved.structure !== null || saved.generatedThesis.length > 0;
+    if (!hasSavedContent) return;
+    setSources(saved.sources);
+    setUrlInput(saved.urlInput);
+    setTextInput(saved.textInput);
+    setTitleInput(saved.titleInput);
+    setStructure(saved.structure);
+    setGeneratedThesis(saved.generatedThesis);
+    setConfig(saved.config);
+    if (saved.structure) {
+      setStep(3);
+      setIsFinished(saved.generatedThesis.length > 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [currentGeneratingChapter, setCurrentGeneratingChapter] = useState<number>(-1);
   const [currentStreamedText, setCurrentStreamedText] = useState('');
   const [isFinished, setIsFinished] = useState(false);
@@ -2649,6 +2755,7 @@ export default function App() {
                 <span>{stacksWallet.isConnecting ? '...' : 'Connect'}</span>
               </button>
             )}
+            <LanguageSwitcher current={lang} options={LANGUAGE_OPTIONS} onSelect={(code) => setAppLanguage(code as AppLanguage)} variant="compact" />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-xl border border-[#1f2128] bg-[#111318] text-[#9ca3af] hover:text-[#f0f1f3] transition"
@@ -2709,9 +2816,16 @@ export default function App() {
                 <div className="relative grid items-center gap-12 lg:grid-cols-[1fr_auto]">
                   <div className="space-y-8 max-w-3xl">
                     {/* Badge */}
-                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="inline-flex items-center gap-2 rounded-full border border-[#f4c95d]/25 bg-[#f4c95d]/8 px-4 py-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#f4c95d] animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.24em] text-[#f4c95d]">{t('heroBadge')}</span>
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-wrap items-center gap-2">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-[#f4c95d]/25 bg-[#f4c95d]/8 px-4 py-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#f4c95d] animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.24em] text-[#f4c95d]">{t('heroBadge')}</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-2">
+                        <Languages className="w-3 h-3 text-sky-400 shrink-0" />
+                        <span className="text-[9px] font-bold text-sky-300">{t('availableLanguagesHint')}</span>
+                        <LanguageSwitcher current={lang} options={LANGUAGE_OPTIONS} onSelect={(code) => setAppLanguage(code as AppLanguage)} variant="compact" />
+                      </div>
                     </motion.div>
 
                     {/* Headline */}

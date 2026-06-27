@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, Languages } from 'lucide-react';
+import { Check, ChevronDown, Languages } from 'lucide-react';
 
 export type LanguageOption = {
   code: string;
@@ -37,12 +37,14 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ current, opt
         onClick={() => setIsOpen((v) => !v)}
         className={
           variant === 'compact'
-            ? 'flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] px-3 py-1.5 rounded-lg border border-[#1f2128] text-[#4a4b4e] hover:text-[#b59a6d] hover:border-[#b59a6d]/30 transition'
-            : 'flex w-full items-center gap-3 px-3 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] hover:text-[#b59a6d] hover:bg-[#111318] transition text-left'
+            ? 'flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.15em] px-3 py-1.5 rounded-lg border border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:border-sky-400/60 transition'
+            : 'flex w-full items-center gap-3 px-3 py-3 rounded-xl border border-sky-500/30 bg-sky-500/10 text-[11px] font-black uppercase tracking-widest text-sky-400 hover:bg-sky-500/20 transition text-left'
         }
       >
         <Languages className="w-3.5 h-3.5 shrink-0" />
-        <span>{currentOption.nativeLabel}</span>
+        <span className={variant === 'compact' ? 'hidden sm:inline' : ''}>{currentOption.nativeLabel}</span>
+        <span className={variant === 'compact' ? 'sm:hidden uppercase' : 'hidden'}>{currentOption.code}</span>
+        <ChevronDown className="w-3 h-3 shrink-0 opacity-60" />
       </button>
 
       <AnimatePresence>
@@ -54,7 +56,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ current, opt
             transition={{ duration: 0.14 }}
             className={
               variant === 'compact'
-                ? 'absolute right-0 top-full mt-2 z-50 max-h-80 w-48 overflow-y-auto rounded-2xl border border-[#1f2128] bg-[#111318] p-1.5 shadow-2xl'
+                ? 'absolute right-0 top-full mt-2 z-50 max-h-80 w-48 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-[#1f2128] bg-[#111318] p-1.5 shadow-2xl'
                 : 'absolute left-0 top-full mt-1 z-50 max-h-80 w-full overflow-y-auto rounded-2xl border border-[#1f2128] bg-[#111318] p-1.5 shadow-2xl'
             }
           >
