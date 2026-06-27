@@ -714,3 +714,51 @@
 - Stacks anchor block: `8399821`
 - Source index verified: `2026-06-25`
 - Citation layer: Stacks mainnet
+
+## 2026-06-26T10:12:24Z
+
+- Stacks anchor block: `8403391`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T11:20:56Z
+
+- Stacks anchor block: `8403792`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T16:30:55Z
+
+- Stacks anchor block: `8405454`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T17:43:31Z
+
+- Stacks anchor block: `8405904`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T19:16:22Z
+
+- Stacks anchor block: `8406460`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T20:24:12Z
+
+- Stacks anchor block: `8406835`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T21:47:06Z
+
+- Stacks anchor block: `8407351`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
+
+## 2026-06-26T22:58:45Z
+
+- Stacks anchor block: `8407805`
+- Source index verified: `2026-06-26`
+- Citation layer: Stacks mainnet
