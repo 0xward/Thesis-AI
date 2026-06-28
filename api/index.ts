@@ -10,29 +10,40 @@ const axios = (require('axios') as typeof import('axios')).default ?? require('a
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const cheerio = require('cheerio') as typeof import('cheerio');
 
-/**
- * Loads an ESM-only package (like `marked`, which has no CommonJS build at
- * all) from this CommonJS-compiled file.
- *
- * Using `await import(...)` directly does NOT work here: TypeScript's
- * CommonJS module target silently rewrites dynamic `import()` calls back
- * into `require()` calls during compilation (a known TS limitation, see
- * microsoft/TypeScript#43329), which then crashes at runtime with
- * "ERR_REQUIRE_ESM" since require() cannot load an ESM-only module.
- *
- * Wrapping the import inside `new Function(...)` hides the import() call
- * from TypeScript's static analysis entirely (it's just a string literal
- * to the compiler), so it survives compilation as a real, un-rewritten
- * dynamic import and works correctly at runtime. This is the same
- * technique used by Oclif/Salesforce's CLI framework for the same reason.
- */
-const dynamicImport = new Function('modulePath', 'return import(modulePath)') as (modulePath: string) => Promise<any>;
+// NOTE on marked: it switched to being an ESM-only package (no CommonJS
+// build at all). Loading it via require() crashes with ERR_REQUIRE_ESM, and
+// loading it via dynamic import() doesn't survive Vercel's bundler either -
+// Vercel's Node File Trace uses static analysis to decide which
+// node_modules to include in the deployed function, and a dynamic
+// import(variablePath) with a non-literal argument isn't visible to that
+// analysis, so the package gets left out of the bundle entirely
+// ("Cannot find package 'marked'" at runtime).
+//
+// markdown-it has an official, fully-supported CommonJS build (require()
+// works directly, confirmed via its own package.json + docs), so it doesn't
+// have either problem. It's used here instead of marked for exactly that
+// reason - not because of a feature difference, purely a packaging one.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const MarkdownIt = require('markdown-it') as typeof import('markdown-it');
+const markdownRenderer = new MarkdownIt({ html: false, linkify: true, breaks: false });
+
+// jsdom, @mozilla/readability, and pdf-parse all ship real CommonJS builds
+// (confirmed via their package.json "main"/"type" fields), so plain
+// require() works for them without any of the issues above.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { JSDOM } = require('jsdom') as typeof import('jsdom');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { Readability } = require('@mozilla/readability') as typeof import('@mozilla/readability');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require('pdf-parse');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const htmlToDocxModule = require('html-to-docx');
+const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
 
 // ─── PDF helper ───────────────────────────────────────────────────────────────
 async function parsePdfBuffer(buffer: Buffer) {
   try {
-    const pdfImport = await dynamicImport('pdf-parse');
-    const pdf = (pdfImport as any).default || pdfImport;
+    const pdf = (pdfParse as any).default || pdfParse;
     const data = await (pdf as any)(buffer);
     return data.text || '';
   } catch (error: any) {
@@ -679,8 +690,6 @@ Rules:
         let extractedText = '';
         let extractedTitle = '';
         try {
-          const { JSDOM } = await dynamicImport('jsdom');
-          const { Readability } = await dynamicImport('@mozilla/readability');
           const dom = new JSDOM(html, { url: pageUrl });
           extractedTitle = dom.window.document.title || '';
           const reader = new Readability(dom.window.document, { charThreshold: 50 });
@@ -931,14 +940,10 @@ Rules:
       const { markdown, title } = req.body;
       if (!markdown) return res.status(400).json({ error: 'Markdown content is required' });
 
-      const { marked } = await dynamicImport('marked');
-      const htmlToDocxModule = await dynamicImport('html-to-docx');
-      const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
       const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
-
       if (!generator) throw new Error('HTMLToDOCX module not found');
 
-      const htmlContent = await marked.parse(markdown);
+      const htmlContent = markdownRenderer.render(markdown);
       const processedHtml = htmlContent.replace(
         /<h1>BAB (.*?)[:\-\n](.*?)<\/h1>/gi,
         (_match: string, bab: string, t: string) =>
@@ -977,13 +982,10 @@ Rules:
       const { markdown, title } = req.body;
       if (!markdown) return res.status(400).json({ error: 'Markdown content is required' });
 
-      const { marked } = await dynamicImport('marked');
-      const htmlToDocxModule = await dynamicImport('html-to-docx');
-      const HTMLToDOCX = (htmlToDocxModule as any).default || htmlToDocxModule;
       const generator = typeof HTMLToDOCX === 'function' ? HTMLToDOCX : (HTMLToDOCX as any).default;
       if (!generator) throw new Error('HTMLToDOCX module not found');
 
-      const htmlContent = await marked.parse(markdown);
+      const htmlContent = markdownRenderer.render(markdown);
       const processedHtml = htmlContent.replace(
         /<h1>BAB (.*?)[:\-\n](.*?)<\/h1>/gi,
         (_match: string, bab: string, t: string) =>
