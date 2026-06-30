@@ -10,7 +10,14 @@
       "src": "api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["api/**"],
+        "includeFiles": [
+          "api/**",
+          "node_modules/markdown-it/**",
+          "node_modules/html-to-docx/**",
+          "node_modules/jsdom/**",
+          "node_modules/@mozilla/readability/**",
+          "node_modules/pdf-parse/**"
+        ],
         "tsconfig": "api/tsconfig.json"
       }
     },
