@@ -2137,7 +2137,21 @@ export default function App() {
         setSources(prev => [...prev, { type: 'text', title: file.name, content }]);
       }
     } catch (e: any) {
-      const errMsg = e.response?.data?.error || e.response?.data || e.message || 'Gagal memproses file.';
+      // Defensively coerce whatever shape the error/response.data is into a
+      // readable string. Previously, if e.response.data was a plain object
+      // without an .error field (e.g. an HTML error page Vercel returns on
+      // a function crash, or an unexpected JSON shape), the template
+      // string below would silently stringify it as the literal text
+      // "[object Object]" instead of a useful message.
+      let errMsg: string = 'Gagal memproses file.';
+      const data = e?.response?.data;
+      if (typeof data === 'string' && data.trim()) {
+        errMsg = data;
+      } else if (data && typeof data === 'object' && typeof data.error === 'string') {
+        errMsg = data.error;
+      } else if (typeof e?.message === 'string' && e.message) {
+        errMsg = e.message;
+      }
       alert(`Gagal membaca file: ${errMsg}`);
     } finally {
       setIsParsingFile(false);
@@ -2436,12 +2450,22 @@ export default function App() {
 
       const titleSafe = structure.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       // Academic thesis margins (inches): Top 3cm=1.18, Left 4cm=1.57, Bottom 3cm=1.18, Right 3cm=1.18
+      //
+      // scale is intentionally kept low (1.5) rather than the higher values
+      // common for short documents. html2canvas renders the ENTIRE container
+      // as one tall canvas before slicing it into PDF pages, and browsers
+      // cap canvas height at 32,767px (Chrome/Firefox) with a ~268M px² area
+      // ceiling -- a long, paginated thesis at a high scale factor can
+      // exceed that, which makes html2canvas silently produce a blank or
+      // corrupted image instead of throwing a catchable error. A lower
+      // scale keeps the total canvas height comfortably under that limit
+      // even for a 50+ page thesis, at a small cost to image sharpness.
       const opt = {
         margin: [1.18, 1.57, 1.18, 1.18] as [number, number, number, number],
         filename: `${titleSafe}.pdf`,
-        image: { type: 'jpeg' as const, quality: 1.0 },
+        image: { type: 'jpeg' as const, quality: 0.95 },
         html2canvas: {
-          scale: 2.5, // Balanced scale
+          scale: 1.5,
           useCORS: true,
           logging: false,
           letterRendering: true,
@@ -2451,20 +2475,14 @@ export default function App() {
         pagebreak: { mode: ['css', 'legacy'] }
       };
 
-      // .save() internally uses URL.createObjectURL, which many in-app
-      // wallet browsers (Xverse, Leather) run in a webview that can't
-      // resolve - the download silently does nothing there. Generating a
-      // base64 data URI instead and navigating an <a download> link to it
-      // works in both normal browsers and those webviews.
-      const pdfInstance = await html2pdf().from(container).set(opt).toPdf().get('pdf');
-      const dataUri = pdfInstance.output('datauristring');
-      const link = document.createElement('a');
-      link.href = dataUri;
-      link.setAttribute('download', `${titleSafe}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-      document.body.removeChild(container);
+      try {
+        // .save() uses a normal blob download, which works correctly in
+        // regular browsers (Chrome, Firefox, Safari) - this is the
+        // standard, well-tested path and is intentionally the default.
+        await html2pdf().from(container).set(opt).save();
+      } finally {
+        document.body.removeChild(container);
+      }
     } catch (e: any) {
       alert("Failed to export PDF: " + e.message);
     }

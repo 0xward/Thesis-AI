@@ -33,12 +33,29 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
     body: JSON.stringify(payload),
   });
 
+  // Read the body ONCE as text, regardless of whether the request succeeded.
+  // A Response body stream can only be consumed once - trying response.json()
+  // and then falling back to response.text() on the same Response object
+  // throws "Failed to execute 'text' on 'Response': body stream already
+  // read", since the failed .json() call has already drained the stream.
+  const rawText = await response.text();
+
   if (!response.ok) {
-    const detail = await response.json().catch(async () => ({ error: await response.text() }));
-    throw new Error((detail as any).error || `Request failed with status ${response.status}`);
+    let message = `Request failed with status ${response.status}`;
+    try {
+      const parsed = JSON.parse(rawText);
+      message = parsed?.error || message;
+    } catch {
+      if (rawText) message = rawText;
+    }
+    throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return JSON.parse(rawText) as T;
+  } catch {
+    throw new Error('Server returned an invalid response. Please try again.');
+  }
 }
 
 export async function chatWithAgent(
@@ -103,11 +120,18 @@ async function startStream(path: string, payload: unknown): Promise<Response> {
   });
 
   if (!response.ok) {
-    // Try to parse a JSON error (e.g. rate limit)
-    const errData = await response.json().catch(async () => ({
-      error: await response.text(),
-    }));
-    throw new Error((errData as any).error || `Stream failed: ${response.status}`);
+    // Read the body ONCE as text - trying response.json() then falling back
+    // to response.text() on the same Response throws "body stream already
+    // read", since the failed .json() call already drained the stream.
+    const rawText = await response.text();
+    let message = `Stream failed: ${response.status}`;
+    try {
+      const parsed = JSON.parse(rawText);
+      message = parsed?.error || message;
+    } catch {
+      if (rawText) message = rawText;
+    }
+    throw new Error(message);
   }
 
   return response;

@@ -29,9 +29,10 @@
     "firebase": "^12.12.1",
     "html-to-docx": "^1.8.0",
     "html2pdf.js": "^0.14.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "25.0.1",
     "lucide-react": "^0.546.0",
     "marked": "^18.0.3",
+    "markdown-it": "^14.2.0",
     "motion": "^12.38.0",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.7.284",
@@ -51,6 +52,7 @@
     "@types/html-to-docx": "^1.8.1",
     "@types/html2pdf.js": "^0.10.0",
     "@types/marked": "^5.0.2",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.14.0",
     "@types/pdf-parse": "^1.1.5",
     "autoprefixer": "^10.4.21",
@@ -60,5 +62,8 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
     "@vercel/node": "^5.0.0"
+  },
+  "overrides": {
+    "jsdom": "25.0.1"
   }
 }
