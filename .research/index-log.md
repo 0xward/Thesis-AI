@@ -2004,3 +2004,9 @@
 - Stacks anchor block: `8604578`
 - Source index verified: `2026-07-21`
 - Citation layer: Stacks mainnet
+
+## 2026-07-21T12:55:49Z
+
+- Stacks anchor block: `8605384`
+- Source index verified: `2026-07-21`
+- Citation layer: Stacks mainnet
