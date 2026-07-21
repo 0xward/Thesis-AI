@@ -1998,3 +1998,9 @@
 - Stacks anchor block: `8604148`
 - Source index verified: `2026-07-21`
 - Citation layer: Stacks mainnet
+
+## 2026-07-21T10:36:12Z
+
+- Stacks anchor block: `8604578`
+- Source index verified: `2026-07-21`
+- Citation layer: Stacks mainnet
