@@ -2880,3 +2880,9 @@
 - Stacks anchor block: `8717627`
 - Source index verified: `2026-08-07`
 - Citation layer: Stacks mainnet
+
+## 2026-08-07T19:40:46Z
+
+- Stacks anchor block: `8717971`
+- Source index verified: `2026-08-07`
+- Citation layer: Stacks mainnet
