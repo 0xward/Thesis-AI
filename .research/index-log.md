@@ -4020,3 +4020,9 @@
 - Stacks anchor block: `8864640`
 - Source index verified: `2026-08-29`
 - Citation layer: Stacks mainnet
+
+## 2026-08-29T12:51:16Z
+
+- Stacks anchor block: `8867966`
+- Source index verified: `2026-08-29`
+- Citation layer: Stacks mainnet
